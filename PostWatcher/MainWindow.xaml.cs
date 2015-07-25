@@ -34,16 +34,9 @@ namespace PostWatcher
         private static string _modelName;
         private static string _methodName;
         private static Dictionary<string, string> _methodPropetries = new Dictionary<string, string>();
-        private static Thread newThread;
+        private static Thread _newThread;
 
         private IsolatedStorageFile isolated = IsolatedStorageFile.GetUserStoreForAssembly();
-
-
-
-        int count = 0;
-        double NPcost = 0;
-        double MyCost = 0;
-
 
         public MainWindow()
         {
@@ -74,7 +67,7 @@ namespace PostWatcher
             throw new NotImplementedException();
         }
 
-        private void ChangeControlState(Control element, bool state)
+        private void AsyncChangeControlState(Control element, bool state)
         {
             if (element.Dispatcher.CheckAccess())
                 element.IsEnabled = state;
@@ -83,15 +76,14 @@ namespace PostWatcher
                     new Action(() => element.IsEnabled = state));
         }
 
-
-        private void ChangeControlVisibility(Control element, Visibility state)
+        private void AsyncChangeControlVisibility(Control element, Visibility state)
         {
             if (element.Dispatcher.CheckAccess())
-                element.Visibility =state;
+                element.Visibility = state;
             else
                 prb_state.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(
                     () => element.Visibility = state
-                        
+
                     )
                     );
         }
@@ -100,52 +92,41 @@ namespace PostWatcher
 
         private void Btn_selectDataOK_OnClick(object sender, RoutedEventArgs e)
         {
+            if (_newThread != null)
+                if (_newThread.IsAlive)
+                    return;
 
             DateTime left = DatePickerLeft.SelectedDate ?? DateTime.Today;
             DateTime right = DatePickerRight.SelectedDate ?? DateTime.Today;
-          
-            if (!CheckConnection())
-            {
-                MessageBox.Show("No Internet Connection!");
-                return;
-            }
-
-            ChangeControlState(btn_selectDataOK, false);
             prb_state.Value = 0;
 
-            newThread = new Thread(
+            //if (!CheckConnection())
+            //{
+            //    MessageBox.Show("No Internet Connection!");
+            //    return;
+            //}
+
+            _newThread = new Thread(
                 () => _GetNovaPoshtaDocuments(left, right)
                                   );
-
-            newThread.Start();
+            _newThread.Start();
 
 
         }
 
         private void _GetNovaPoshtaDocuments(DateTime left, DateTime right)
         {
-           
-           
-                foreach (var file in isolated.GetFileNames())
-                {
-                    isolated.DeleteFile(file);
-                }
-           
-            
-            ChangeControlVisibility(prb_state, Visibility.Visible);
-
+            foreach (var file in isolated.GetFileNames())
+            {
+                isolated.DeleteFile(file);
+            }
+            AsyncChangeControlVisibility(prb_state, Visibility.Visible);
             GetNovaPoshtaDocuments(left, right);
-
-            ChangeControlState(btn_selectDataOK, true);
-
-            ChangeControlVisibility(prb_state, Visibility.Hidden);
-
+            AsyncChangeControlVisibility(prb_state, Visibility.Hidden);
         }
 
         private void GetNovaPoshtaDocuments(DateTime left, DateTime right)
         {
-            ChangeControlState(prb_state, true);
-
             if (DG_doc.Dispatcher.CheckAccess())
             {
                 DG_doc.Items.Clear();
@@ -159,36 +140,40 @@ namespace PostWatcher
             _modelName = "InternetDocument";
             _methodName = "getDocumentList";
 
-            var current = left;
-
             for (int i = 0; i < (right - left).Days + 1; i++)
             {
                 if (prb_state.Dispatcher.CheckAccess())
-                    prb_state.Value += 1000.0/((right - left).Days + 1);
+                    prb_state.Value += 1000.0 / ((right - left).Days + 1);
                 else
                     prb_state.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(
-                        () => prb_state.Value += 1000.0/((right - left).Days + 1)
+                        () => prb_state.Value += 1000.0 / ((right - left).Days + 1)
                         )
                         );
 
-                var temp = current.AddDays(i);
+                var current = left.AddDays(i);
+               
+                var xmlDoc = new XmlDocument();
+               var methodPropetriesNode = xmlDoc.CreateNode(XmlNodeType.Element, "DateTime",
+                   null);
+                methodPropetriesNode.InnerText = String.Format("{0}.{1}.{2}", current.Day, current.Month, current.Year);
+                xmlDoc.AppendChild(methodPropetriesNode);
+                XmlNodeList xmlList = xmlDoc.ChildNodes;
 
-                _methodPropetries.Add("DateTime", String.Format("{0}.{1}.{2}", temp.Day, temp.Month, temp.Year));
-                var xmlQuery = MakeXmlQuery(_APIKey, _modelName, _methodName, _methodPropetries);
+                var newDocument = new Document();
+                var xmlQuery = newDocument.MakeRequestXmlDocument(_APIKey, _modelName, _methodName, xmlList);
+
                 XmlDocument xmlResponse = null;
                 try
                 {
-                    xmlResponse = SendRequest(xmlQuery);
+                    xmlResponse = newDocument.SendRequestXmlDocument(xmlQuery);
                 }
                 catch (WebException e)
                 {
                     MessageBox.Show(e.Message);
                     Thread.CurrentThread.Abort();
                 }
-
                 SaveRequest(xmlResponse, i.ToString());
                 ReadXml(xmlResponse);
-                _methodPropetries.Clear();
             }
         }
 
@@ -198,27 +183,12 @@ namespace PostWatcher
             {
                 using (var client = new WebClient())
                 using (var stream = client.OpenRead("http://www.google.com")) ;
-
-
-
                 return true;
             }
             catch
             {
                 return false;
             }
-
-
-        }
-
-        private XmlDocument MakeXmlQuery(string APIkey, string modelName, string methodName,
-            Dictionary<string, string> methodPropetries)
-        {
-            return global::API_NovaPoshta.API_NovaPoshta._makeXmlDocument(APIkey, modelName, methodName, methodPropetries);
-        }
-        private XmlDocument SendRequest(XmlDocument xmlDocument)
-        {
-            return global::API_NovaPoshta.API_NovaPoshta._Request(xmlDocument);
         }
 
         private void SaveRequest(XmlDocument xmlDocument, string name)
@@ -230,7 +200,6 @@ namespace PostWatcher
             writer.Close();
 
         }
-
 
         private void GetFiles()
         {
@@ -254,33 +223,32 @@ namespace PostWatcher
 
         private void ReadXml(XmlDocument xmlDocument)
         {
+            var document = new Document();
+            document.LoadResposneXmlDocument(xmlDocument);
 
-            var Document = new Document();
-            Document.LoadResposneXml(xmlDocument);
+            if (!document.Success)
+                MessageBox.Show(document.Error);
 
-            if (!Document.Success)
-                MessageBox.Show(Document.Error);
-
-            if (!Document.HasData)
+            if (!document.HasData)
                 return;
 
             if (DG_doc.Dispatcher.CheckAccess())
             {
 
-                DG_doc.Items.Add(Document.Items);
+                DG_doc.Items.Add(document.Items);
             }
             else
             {
                 DG_doc.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
-                    new Action(() => DG_doc.Items.Add(Document.Items)));
+                    new Action(() => DG_doc.Items.Add(document.Items)));
             }
         }
 
         private void Btn_cancel_OnClick(object sender, RoutedEventArgs e)
         {
-            if (newThread.IsAlive)
-                newThread.Abort();
-            btn_selectDataOK.IsEnabled = true;
+            if (_newThread.IsAlive)
+                _newThread.Abort();
+            prb_state.Visibility = Visibility.Hidden;
         }
     }
 }

@@ -66,47 +66,47 @@ namespace API_NovaPoshta
         }
 
 
-        public static void _XmlReader(XmlDocument xmlDocument)
-        {
-            Console.WriteLine(xmlDocument.DocumentElement.Name);
+        //public static void _XmlReader(XmlDocument xmlDocument)
+        //{
+        //    Console.WriteLine(xmlDocument.DocumentElement.Name);
 
-            var query = from XmlNode x in xmlDocument.DocumentElement.ChildNodes
-                        select x;
-
-
-            //foreach (var item in query)
-            //{
-            //    Console.WriteLine(item.Name);
-            //    foreach (XmlNode nodes in item.ChildNodes)
-            //    {
-            //        Console.WriteLine(nodes.Name + " " + nodes.Value);
-            //    }
-            //}
+        //    var query = from XmlNode x in xmlDocument.DocumentElement.ChildNodes
+        //                select x;
 
 
-            XmlNode xmlNode = query.Single((XmlNode x) => x.Name == "data");
-
-            var getItems = from XmlNode x in xmlNode.ChildNodes
-                           select x;
-
-            //  Console.WriteLine(xmlNode.Name);
-            foreach (var item in getItems)
-            {
-                var getItemInfo = from XmlNode x in item.ChildNodes
-                                  select x;
-
-                Console.WriteLine(item.Name);
-
-                foreach (var info in getItemInfo)
-                {
-                    Console.WriteLine("\t" + info.Name + "\t" + info.InnerText);
-                }
+        //    //foreach (var item in query)
+        //    //{
+        //    //    Console.WriteLine(item.Name);
+        //    //    foreach (XmlNode nodes in item.ChildNodes)
+        //    //    {
+        //    //        Console.WriteLine(nodes.Name + " " + nodes.Value);
+        //    //    }
+        //    //}
 
 
-            }
+        //    XmlNode xmlNode = query.Single((XmlNode x) => x.Name == "data");
 
-            Console.ReadLine();
-        }
+        //    var getItems = from XmlNode x in xmlNode.ChildNodes
+        //                   select x;
+
+        //    //  Console.WriteLine(xmlNode.Name);
+        //    foreach (var item in getItems)
+        //    {
+        //        var getItemInfo = from XmlNode x in item.ChildNodes
+        //                          select x;
+
+        //        Console.WriteLine(item.Name);
+
+        //        foreach (var info in getItemInfo)
+        //        {
+        //            Console.WriteLine("\t" + info.Name + "\t" + info.InnerText);
+        //        }
+
+
+        //    }
+
+        //    Console.ReadLine();
+        //}
 
         /// <summary>
         /// Make XML document with query
