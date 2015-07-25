@@ -1,0 +1,18 @@
+﻿<CodeSnippet Format="1.0.0" xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <Header>
+    <Title>Console ReadLine</Title>
+    <Author>Ihol</Author>
+    <Shortcut>cr</Shortcut>
+    <Description>Console Readline</Description>
+    <SnippetTypes>
+      <SnippetType>SurroundsWith</SnippetType>
+      <SnippetType>Expansion</SnippetType>
+    </SnippetTypes>
+  </Header>
+  <Snippet>
+   
+    <Code Language="CSharp">
+      <![CDATA[Console.Readline();]]>
+    </Code>
+  </Snippet>
+</CodeSnippet>
