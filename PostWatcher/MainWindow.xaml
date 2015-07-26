@@ -7,7 +7,7 @@
         ResizeMode="CanMinimize">
     <Grid>
 
-        <Menu IsMainMenu="True" HorizontalAlignment="Left" Margin="0,0,0,610" Width="1297"   >
+        <Menu IsMainMenu="True" HorizontalAlignment="Left" Margin="0,0,0,594" Width="1297"   >
             <MenuItem Header="File" Height="22" Width="34">
                 <MenuItem x:Name="menuResresh" Header="Resresh" Click ="menuResresh_OnClick">
 
@@ -30,11 +30,11 @@
         <Button x:Name="btn_selectDataOK" Content="OK" HorizontalAlignment="Left" Margin="243,117,0,0" VerticalAlignment="Top" Width="75" Click="Btn_selectDataOK_OnClick"/>
         <Label Content="From" HorizontalAlignment="Left" Margin="21,53,0,0" VerticalAlignment="Top"/>
         <Label Content="To" HorizontalAlignment="Left" Margin="182,53,0,0" VerticalAlignment="Top"/>
-        <GroupBox Header="Search" HorizontalAlignment="Left" Margin="10,39,0,0" VerticalAlignment="Top" Height="113" Width="317"/>
+        <GroupBox Header="Search" BorderBrush="Crimson" HorizontalAlignment="Left" Margin="10,39,0,0" VerticalAlignment="Top" Height="113" Width="317"/>
         <TextBox x:Name="tb_count"  HorizontalAlignment="Left" Height="23" Margin="416,53,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="120"/>
         <TextBox x:Name="tb_NPcost" HorizontalAlignment="Left" Height="23" Margin="416,81,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="120"/>
         <TextBox x:Name="tb_Mycost" HorizontalAlignment="Left" Height="23" Margin="416,109,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="120"/>
-        <DataGrid Name="DG_doc" CanUserResizeColumns="True"  ItemsSource="{Binding}" GridLinesVisibility="All"  HorizontalAlignment="Center" Margin="20,178,10,38" VerticalAlignment="Center" Height="417" Width="1267" AutoGenerateColumns="False" >
+        <DataGrid Name="DG_doc" BorderBrush="Crimson" BorderThickness="10" CanUserResizeColumns="True"  ItemsSource="{Binding}" GridLinesVisibility="All"  HorizontalAlignment="Center" Margin="10,173,20,43" VerticalAlignment="Center" Height="417" Width="1267" AutoGenerateColumns="False" >
             <DataGrid.Columns >
 
                 <DataGridTextColumn SortMemberPath="IntDocNumber" Header = "Номер ТТН" Binding="{Binding IntDocNumber}" Width="150" CanUserResize="False">
@@ -72,7 +72,7 @@
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Text="{Binding CityRecipientDescription}" Grid.Row="0" Margin="5,2,5,3" FontWeight="Bold" FontSize="14" TextWrapping="Wrap" VerticalAlignment="Center"></TextBlock>
-                                <TextBlock Text="{Binding RecipientDescription}" Grid.Row="1" FontSize="14" Margin="5,0,5,0" VerticalAlignment="Center"></TextBlock>
+                                <TextBlock Text="{Binding RecipientDescription}" Grid.Row="1" FontSize="14" Margin="5,0,5,0" VerticalAlignment="Center" TextWrapping="Wrap"></TextBlock>
                                 <TextBlock Text="{Binding RecipientAddressDescription}" Grid.Row="2" FontSize="14" Margin="5,0,5,0"  TextWrapping="Wrap" VerticalAlignment="Center"></TextBlock>
                             </Grid>
                         </DataTemplate>

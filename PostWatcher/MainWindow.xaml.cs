@@ -244,12 +244,12 @@ namespace PostWatcher
                 if (DG_doc.Dispatcher.CheckAccess())
                 {
 
-                    DG_doc.Items.Add(document.Items);
+                    DG_doc.Items.Add(dataItem);
                 }
                 else
                 {
                     DG_doc.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
-                        new Action(() => DG_doc.Items.Add(document.Items)));
+                        new Action(() => DG_doc.Items.Add(dataItem)));
                 }
             }
         }
