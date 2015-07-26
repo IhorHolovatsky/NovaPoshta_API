@@ -47,7 +47,7 @@
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn SortMemberPath="DateTime" Header = "Дата відправлення" Binding="{Binding DateTime, StringFormat=\{0:dd MMMM yyyy\}}" CanUserResize="False" >
+                <DataGridTextColumn SortMemberPath="DateTime" Header = "Дата відправлення" Binding="{Binding DateTimee, StringFormat=\{0:dd MMMM yyyy\}}" CanUserResize="False" >
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="{x:Type TextBlock}">
                             <Setter Property="VerticalAlignment" Value="Center" />
@@ -102,6 +102,14 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Weight, StringFormat={}{0} кг.}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" Margin="5,0,5,0"></TextBlock>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header ="Додаткова інформація" CanUserResize="False" SortMemberPath="Description">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding CargoType, StringFormat={}{0}}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" Margin="5,0,5,0"></TextBlock>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
 

@@ -86,7 +86,7 @@ namespace PostWatcher
             get { return _ref; }
         }
 
-        public DateTime DateTime
+        public DateTime DateTimee
         {
             get { return _dateTime; }
         }

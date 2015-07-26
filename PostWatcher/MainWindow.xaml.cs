@@ -5,6 +5,7 @@ using System.IO.IsolatedStorage;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -33,10 +34,9 @@ namespace PostWatcher
         private static string _APIKey = "fd00953407f9e0ac0c86a94cdc91c33c";
         private static string _modelName;
         private static string _methodName;
-        private static Dictionary<string, string> _methodPropetries = new Dictionary<string, string>();
+        private static DataItem filter = new DataItem();
         private static Thread _newThread;
-
-        private IsolatedStorageFile isolated = IsolatedStorageFile.GetUserStoreForAssembly();
+        private readonly IsolatedStorageFile _isolated = IsolatedStorageFile.GetUserStoreForAssembly();
 
         public MainWindow()
         {
@@ -116,9 +116,9 @@ namespace PostWatcher
 
         private void _GetNovaPoshtaDocuments(DateTime left, DateTime right)
         {
-            foreach (var file in isolated.GetFileNames())
+            foreach (var file in _isolated.GetFileNames())
             {
-                isolated.DeleteFile(file);
+                _isolated.DeleteFile(file);
             }
             AsyncChangeControlVisibility(prb_state, Visibility.Visible);
             GetNovaPoshtaDocuments(left, right);
@@ -151,10 +151,10 @@ namespace PostWatcher
                         );
 
                 var current = left.AddDays(i);
-        
+
                 var xmlDoc = new XmlDocument();
-               var methodPropetriesNode = xmlDoc.CreateNode(XmlNodeType.Element, "DateTime",
-                   null);
+                var methodPropetriesNode = xmlDoc.CreateNode(XmlNodeType.Element, "DateTime",
+                    null);
                 methodPropetriesNode.InnerText = String.Format("{0}.{1}.{2}", current.Day, current.Month, current.Year);
                 xmlDoc.AppendChild(methodPropetriesNode);
                 XmlNodeList xmlList = xmlDoc.ChildNodes;
@@ -173,7 +173,8 @@ namespace PostWatcher
                     Thread.CurrentThread.Abort();
                 }
                 SaveRequest(xmlResponse, i.ToString());
-                AddItemsToDataGrid(xmlResponse);
+
+                AddItemsToDataGrid(xmlResponse, filter);
             }
         }
 
@@ -195,7 +196,7 @@ namespace PostWatcher
         {
 
             // var isolatedStream = new IsolatedStorageFileStream("Request" + name +".xml", FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
-            var writer = new XmlTextWriter(isolated.CreateFile("Request" + name + ".xml") as FileStream, Encoding.UTF8);
+            var writer = new XmlTextWriter(_isolated.CreateFile("Request" + name + ".xml"), Encoding.UTF8);
             xmlDocument.Save(writer);
             writer.Close();
 
@@ -203,15 +204,15 @@ namespace PostWatcher
 
         private void GetFiles()
         {
-            foreach (var xmlDoc in isolated.GetFileNames().Select(ReadFile))
+            foreach (var xmlDoc in _isolated.GetFileNames().Select(ReadFile))
             {
-                AddItemsToDataGrid(xmlDoc);
+                AddItemsToDataGrid(xmlDoc, null);
             }
         }
 
         private XmlDocument ReadFile(string file)
         {
-            var fileStream = new XmlTextReader(isolated.OpenFile(file, FileMode.Open, FileAccess.Read, FileShare.Write));
+            var fileStream = new XmlTextReader(_isolated.OpenFile(file, FileMode.Open, FileAccess.Read, FileShare.Write));
             var xmlDoc = new XmlDocument();
             xmlDoc.Load(fileStream);
             fileStream.Close();
@@ -219,10 +220,11 @@ namespace PostWatcher
         }
 
 
-        private void AddItemsToDataGrid(XmlDocument xmlDocument)
+        private void AddItemsToDataGrid(XmlDocument xmlDocument, DataItem filterDocument)
         {
             var document = new Document();
             document.LoadResposneXmlDocument(xmlDocument);
+
 
             //var query = from x in  document.Items
             //            select  x.
@@ -233,16 +235,35 @@ namespace PostWatcher
             if (!document.HasData)
                 return;
 
-            if (DG_doc.Dispatcher.CheckAccess())
+            foreach (var dataItem in document.Items)
             {
+                if (!CompareTwoDocuments(dataItem, filterDocument)) continue;
 
-                DG_doc.Items.Add(document.Items);
+                if (DG_doc.Dispatcher.CheckAccess())
+                {
+
+                    DG_doc.Items.Add(document.Items);
+                }
+                else
+                {
+                    DG_doc.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
+                        new Action(() => DG_doc.Items.Add(document.Items)));
+                }
             }
-            else
-            {
-                DG_doc.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
-                    new Action(() => DG_doc.Items.Add(document.Items)));
-            }
+        }
+
+        private static bool CompareTwoDocuments(DataItem self, DataItem to)
+        {
+            if (self == null || to == null) return true;
+
+            var type = typeof(DateTime);
+            var query = from pi in type.GetProperties(BindingFlags.Public)
+                        let selfValue = type.GetProperty(pi.Name).GetValue(self, null)
+                        let toValue = type.GetProperty(pi.Name).GetValue(to, null)
+                        where (selfValue != toValue && (selfValue == null || !selfValue.Equals(toValue)))
+                        select selfValue;
+
+            return !query.Any();
         }
 
         private void Btn_cancel_OnClick(object sender, RoutedEventArgs e)
