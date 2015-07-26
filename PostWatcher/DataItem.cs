@@ -70,6 +70,7 @@ namespace PostWatcher
         private string _senderAddressDescription;
         private string _recipientAddressDescription;
         private bool _printed;
+        private string _printedDescription;
         private string _fulfillment;
         private DateTime _estimatedDeliveryDate;
         private DateTime _dateLastUpdatedStatus;
@@ -430,7 +431,11 @@ namespace PostWatcher
             get { return _backwardDeliveryCargoType; }
         }
 
-
+        public string PrintedDescription
+        {
+            get { return _printedDescription; }
+          private  set {  _printedDescription = value; }
+        }
 
 
         public void LoadXml(XmlNode xmlDoc)
@@ -653,7 +658,7 @@ namespace PostWatcher
                 }
             }
 
+            _printedDescription = _printed ? "Роздруковано" : "Не роздруковано";
         }
-
     }
 }

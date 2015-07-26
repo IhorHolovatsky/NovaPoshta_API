@@ -151,7 +151,7 @@ namespace PostWatcher
                         );
 
                 var current = left.AddDays(i);
-               
+        
                 var xmlDoc = new XmlDocument();
                var methodPropetriesNode = xmlDoc.CreateNode(XmlNodeType.Element, "DateTime",
                    null);
@@ -173,7 +173,7 @@ namespace PostWatcher
                     Thread.CurrentThread.Abort();
                 }
                 SaveRequest(xmlResponse, i.ToString());
-                ReadXml(xmlResponse);
+                AddItemsToDataGrid(xmlResponse);
             }
         }
 
@@ -203,12 +203,10 @@ namespace PostWatcher
 
         private void GetFiles()
         {
-            foreach (var file in isolated.GetFileNames())
+            foreach (var xmlDoc in isolated.GetFileNames().Select(ReadFile))
             {
-                var xmlDoc = ReadFile(file);
-                ReadXml(xmlDoc);
+                AddItemsToDataGrid(xmlDoc);
             }
-
         }
 
         private XmlDocument ReadFile(string file)
@@ -221,10 +219,13 @@ namespace PostWatcher
         }
 
 
-        private void ReadXml(XmlDocument xmlDocument)
+        private void AddItemsToDataGrid(XmlDocument xmlDocument)
         {
             var document = new Document();
             document.LoadResposneXmlDocument(xmlDocument);
+
+            //var query = from x in  document.Items
+            //            select  x.
 
             if (!document.Success)
                 MessageBox.Show(document.Error);
