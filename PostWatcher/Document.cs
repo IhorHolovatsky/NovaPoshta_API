@@ -56,7 +56,7 @@ namespace PostWatcher
             //Properties of connection
             httpWebRequest.Method = "POST";
             httpWebRequest.ContentType = @"application/x-www-form-urlencoded";
-            httpWebRequest.Timeout = 20000;
+            httpWebRequest.Timeout = 4000;
             ServicePointManager.DefaultConnectionLimit = 1000;
 
             //Out stream

@@ -47,7 +47,7 @@
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn SortMemberPath="DateTime" Header = "Дата відправлення" Binding="{Binding DateTimee, StringFormat=\{0:dd MMMM yyyy\}}" CanUserResize="False" >
+                <DataGridTextColumn SortMemberPath="DateTime" Header = "Дата відправлення" Binding="{Binding DateTime, StringFormat=\{0:dd MMMM yyyy\}}" CanUserResize="False" >
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="{x:Type TextBlock}">
                             <Setter Property="VerticalAlignment" Value="Center" />

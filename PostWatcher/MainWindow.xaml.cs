@@ -92,6 +92,12 @@ namespace PostWatcher
 
         private void Btn_selectDataOK_OnClick(object sender, RoutedEventArgs e)
         {
+            if (!CheckConnection())
+            {
+                MessageBox.Show("No Internet Connection!");
+                return;
+            }
+
             if (_newThread != null)
                 if (_newThread.IsAlive)
                     return;
@@ -100,12 +106,7 @@ namespace PostWatcher
             DateTime right = DatePickerRight.SelectedDate ?? DateTime.Today;
             prb_state.Value = 0;
 
-            //if (!CheckConnection())
-            //{
-            //    MessageBox.Show("No Internet Connection!");
-            //    return;
-            //}
-
+            
             _newThread = new Thread(
                 () => _GetNovaPoshtaDocuments(left, right)
                                   );
@@ -170,6 +171,7 @@ namespace PostWatcher
                 catch (WebException e)
                 {
                     MessageBox.Show(e.Message);
+                    AsyncChangeControlVisibility(prb_state, Visibility.Hidden);
                     Thread.CurrentThread.Abort();
                 }
                 SaveRequest(xmlResponse, i.ToString());
