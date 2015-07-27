@@ -26,7 +26,7 @@ namespace API_NovaPoshta
             httpWebRequest.Method = "POST";
             httpWebRequest.ContentType = @"application/x-www-form-urlencoded";
       //      httpWebRequest.ContentLength = Encoding.UTF8.GetByteCount(xmlRequest.InnerXml);
-            httpWebRequest.Timeout = 20000;
+            httpWebRequest.Timeout = 4000;
             ServicePointManager.DefaultConnectionLimit = 1000;
 
             //Out stream

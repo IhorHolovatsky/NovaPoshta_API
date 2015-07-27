@@ -185,7 +185,7 @@ namespace PostWatcher
             try
             {
                 using (var client = new WebClient())
-                using (var stream = client.OpenRead("http://www.google.com")) ;
+                using (var stream = client.OpenRead("http://www.google.com")) 
                 return true;
             }
             catch
@@ -228,9 +228,6 @@ namespace PostWatcher
             document.LoadResposneXmlDocument(xmlDocument);
 
 
-            //var query = from x in  document.Items
-            //            select  x.
-
             if (!document.Success)
                 MessageBox.Show(document.Error);
 
@@ -262,7 +259,7 @@ namespace PostWatcher
             var query = from pi in type.GetProperties(BindingFlags.Public)
                         let selfValue = type.GetProperty(pi.Name).GetValue(self, null)
                         let toValue = type.GetProperty(pi.Name).GetValue(to, null)
-                        where (selfValue != toValue && (selfValue == null || !selfValue.Equals(toValue)))
+                        where (selfValue != toValue && toValue != null)
                         select selfValue;
 
             return !query.Any();
@@ -273,6 +270,11 @@ namespace PostWatcher
             if (_newThread.IsAlive)
                 _newThread.Abort();
             prb_state.Visibility = Visibility.Hidden;
+        }
+
+        private void Cb_StateName_OnSelected(object sender, RoutedEventArgs e)
+        {
+            filter.StateName = ((TextBlock) cb_StateName.SelectedItem).Text;
         }
     }
 }

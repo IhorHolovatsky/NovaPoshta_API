@@ -80,7 +80,7 @@ namespace PostWatcher
         private string _statePayId;
         private string _statePayName;
         private string _backwardDeliveryCargoType;
-
+        
         public string Ref
         {
             get { return _ref; }
@@ -319,6 +319,7 @@ namespace PostWatcher
         public string StateName
         {
             get { return _stateName; }
+            set { _stateName = value; }
         }
 
         public string RecipientFullName
@@ -500,6 +501,7 @@ namespace PostWatcher
                         break;
                     case "DeletionMark":
                         _deletionMark = info.InnerText;
+                     
                         break;
                     case "CargoType":
                         _cargoType = info.InnerText;
