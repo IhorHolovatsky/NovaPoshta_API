@@ -109,6 +109,7 @@ namespace PostWatcher
         public string IntDocNumber
         {
             get { return _intDocNumber; }
+            set { _intDocNumber = value; }
         }
 
         public double Cost
@@ -350,6 +351,7 @@ namespace PostWatcher
         public string CityRecipientDescription
         {
             get { return _cityRecipientDescription; }
+            set { _cityRecipientDescription = value; }
         }
 
         public string SenderDescription
@@ -365,6 +367,7 @@ namespace PostWatcher
         public string RecipientContactPhone
         {
             get { return _recipientContactPhone; }
+            set { _recipientContactPhone = value; }
         }
 
         public string RecipientContactPerson

@@ -35,6 +35,7 @@ namespace PostWatcher
         private static string _modelName;
         private static string _methodName;
         private static DataItem filter = new DataItem();
+        private static List<Action> actions = new List<Action>();
         private static Thread _newThread;
         private readonly IsolatedStorageFile _isolated = IsolatedStorageFile.GetUserStoreForAssembly();
 
@@ -106,7 +107,7 @@ namespace PostWatcher
             DateTime right = DatePickerRight.SelectedDate ?? DateTime.Today;
             prb_state.Value = 0;
 
-            
+
             _newThread = new Thread(
                 () => _GetNovaPoshtaDocuments(left, right)
                                   );
@@ -185,8 +186,8 @@ namespace PostWatcher
             try
             {
                 using (var client = new WebClient())
-                using (var stream = client.OpenRead("http://www.google.com")) 
-                return true;
+                using (var stream = client.OpenRead("http://www.google.com"))
+                    return true;
             }
             catch
             {
@@ -206,9 +207,11 @@ namespace PostWatcher
 
         private void GetFiles()
         {
+            DG_doc.Items.Clear();
+
             foreach (var xmlDoc in _isolated.GetFileNames().Select(ReadFile))
             {
-                AddItemsToDataGrid(xmlDoc, null);
+                AddItemsToDataGrid(xmlDoc, filter);
             }
         }
 
@@ -245,25 +248,59 @@ namespace PostWatcher
                 }
                 else
                 {
+                    DataItem thisValue = dataItem;
                     DG_doc.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
-                        new Action(() => DG_doc.Items.Add(dataItem)));
+                        new Action(() => DG_doc.Items.Add(thisValue)));
                 }
             }
+
         }
 
         private static bool CompareTwoDocuments(DataItem self, DataItem to)
         {
-            if (self == null || to == null) return true;
+            if (self == null) return false;
+            if (to == null) return true;
 
-            var type = typeof(DateTime);
-            var query = from pi in type.GetProperties(BindingFlags.Public)
-                        let selfValue = type.GetProperty(pi.Name).GetValue(self, null)
-                        let toValue = type.GetProperty(pi.Name).GetValue(to, null)
-                        where (selfValue != toValue && toValue != null)
-                        select selfValue;
+            var type = self.GetType();
+            //var query = from pi in type.GetProperties(BindingFlags.Public)
+            //    let selfValue = type.GetProperty(pi.Name).GetValue(self, null)
+            //    let toValue = type.GetProperty(pi.Name).GetValue(to, null)
+            //    where (selfValue == toValue)
+            //    select selfValue;
+            int countOfEquals = 0;
+            List<object> query = new List<object>();
 
-            return !query.Any();
+            foreach (var pi in type.GetProperties(BindingFlags.Public | BindingFlags.DeclaredOnly | BindingFlags.Instance))
+            {
+                var selfValue = type.GetProperty(pi.Name).GetValue(self, null);
+                var toValue = type.GetProperty(pi.Name).GetValue(to, null);
+
+                if (selfValue == null || toValue == null) continue;
+
+
+                var isDefault = toValue.Equals(GetDefault(pi.PropertyType));
+
+                if (!isDefault)
+                    countOfEquals++;
+
+                if (selfValue.Equals(toValue) && !isDefault)
+                {
+                    query.Add(selfValue);
+                }
+            }
+
+            return query.Count() == countOfEquals;
+
         }
+
+        private static object GetDefault(Type t)
+        {
+            //if (t == typeof(DateTime))
+            //    return DateTime.MinValue;
+            return t.IsValueType ? Activator.CreateInstance(t) : null;
+        }
+
+
 
         private void Btn_cancel_OnClick(object sender, RoutedEventArgs e)
         {
@@ -274,7 +311,30 @@ namespace PostWatcher
 
         private void Cb_StateName_OnSelected(object sender, RoutedEventArgs e)
         {
-            filter.StateName = ((TextBlock) cb_StateName.SelectedItem).Text;
+            var innerText = ((TextBlock)cb_StateName.SelectedItem).Text;
+            filter.StateName = innerText == "" ? null : innerText;
+        }
+
+
+        private void Btn_OKfilter_OnClick(object sender, RoutedEventArgs e)
+        {
+            GetFiles();
+        }
+
+        private void Tb_IntDoc_OnTextChanged(object sender, TextChangedEventArgs e)
+        {
+            filter.IntDocNumber = tb_IntDoc.Text != "" ? tb_IntDoc.Text : null;
+        }
+
+        private void Tb_RecipientCityDescription_OnTextChanged(object sender, TextChangedEventArgs e)
+        {
+            filter.CityRecipientDescription = tb_RecipientCityDescription.Text != "" ? 
+                tb_RecipientCityDescription.Text : null;
+        }
+
+        private void Tb_RecipientPhone_OnTextChanged(object sender, TextChangedEventArgs e)
+        {
+            filter.RecipientContactPhone = tb_RecipientPhone.Text != "" ? tb_RecipientPhone.Text : null;
         }
     }
 }
