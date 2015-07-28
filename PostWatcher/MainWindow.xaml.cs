@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.IsolatedStorage;
 using System.Linq;
@@ -92,27 +93,23 @@ namespace PostWatcher
         }
         #endregion
 
-        private void AsyncChangeControlState(Control element, bool state)
-        {
-            if (element.Dispatcher.CheckAccess())
-                element.IsEnabled = state;
-            else
-                element.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
-                    new Action(() => element.IsEnabled = state));
-        }
 
-        private void AsyncChangeControlVisibility(Control element, Visibility state)
+        private void AsyncChangeControlState(Control element, Action action)
         {
             if (element.Dispatcher.CheckAccess())
-                element.Visibility = state;
+                action();
             else
                 prb_state.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
-                    new Action(
-                    () => element.Visibility = state
-                              )
-                    );
+                    action);
         }
-
+        private void AsyncChangeControlState(TextBlock element, Action action)
+        {
+            if (element.Dispatcher.CheckAccess())
+                action();
+            else
+                prb_state.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
+                    action);
+        }
 
 
         protected bool CheckConnection()
@@ -168,16 +165,8 @@ namespace PostWatcher
                 if (!CompareTwoDocuments(dataItem, filterDocument)) continue;
                 if (stateFilter.Contains(dataItem.StateName)) continue;
 
-                if (DG_doc.Dispatcher.CheckAccess())
-                {
-                    DG_doc.Items.Add(dataItem);
-                }
-                else
-                {
-                    var thisValue = dataItem;
-                    DG_doc.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
-                        new Action(() => DG_doc.Items.Add(thisValue)));
-                }
+                var thisValue = dataItem;
+                AsyncChangeControlState(DG_doc, () => DG_doc.Items.Add(thisValue));
             }
         }
 
@@ -230,15 +219,15 @@ namespace PostWatcher
 
         private void Btn_selectDataOK_OnClick(object sender, RoutedEventArgs e)
         {
+            if (_newThread != null)
+                if (_newThread.IsAlive)
+                    return;
+
             if (!CheckConnection())
             {
                 MessageBox.Show("No Internet Connection!");
                 return;
             }
-
-            if (_newThread != null)
-                if (_newThread.IsAlive)
-                    return;
 
             DateTime left = DatePickerLeft.SelectedDate ?? DateTime.Today;
             DateTime right = DatePickerRight.SelectedDate ?? DateTime.Today;
@@ -256,38 +245,34 @@ namespace PostWatcher
             {
                 _isolated.DeleteFile(file);
             }
-            AsyncChangeControlVisibility(prb_state, Visibility.Visible);
+
+            var timer = new Stopwatch();
+            timer.Start();
+
+            AsyncChangeControlState(prb_state, () => prb_state.Visibility = Visibility.Visible);
             GetNovaPoshtaDocuments(left, right);
-            AsyncChangeControlVisibility(prb_state, Visibility.Hidden);
+            AsyncChangeControlState(prb_state, () => prb_state.Visibility = Visibility.Hidden);
+           
+            timer.Stop();
+
+            AsyncChangeControlState(tb_state, () => tb_state.Text = "Затрачений час: " + timer.Elapsed.ToString("g"));
         }
 
         private void GetNovaPoshtaDocuments(DateTime left, DateTime right)
         {
-            if (DG_doc.Dispatcher.CheckAccess())
-            {
-                DG_doc.Items.Clear();
-            }
-            else
-            {
-                DG_doc.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
-                    new Action(() => DG_doc.Items.Clear()));
-            }
+            AsyncChangeControlState(DG_doc, () => DG_doc.Items.Clear());
 
             _modelName = "InternetDocument";
             _methodName = "getDocumentList";
 
             for (int i = 0; i < (right - left).Days + 1; i++)
             {
-                if (prb_state.Dispatcher.CheckAccess())
-                    prb_state.Value += 1000.0 / ((right - left).Days + 1);
-                else
-                    prb_state.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
-                        new Action(
-                            () => prb_state.Value += 1000.0 / ((right - left).Days + 1)
-                                  )
-                        );
+                var prbValue = 1000.0/((right - left).Days + 1);
+                AsyncChangeControlState(prb_state, () => prb_state.Value += prbValue);
 
                 var current = left.AddDays(i);
+
+                AsyncChangeControlState(tb_state, () => tb_state.Text = current.ToString("dd MMMM yyyy"));
 
                 var xmlDoc = new XmlDocument();
                 var methodPropetriesNode = xmlDoc.CreateNode(XmlNodeType.Element, "DateTime",
@@ -307,7 +292,7 @@ namespace PostWatcher
                 catch (WebException e)
                 {
                     MessageBox.Show(e.Message);
-                    AsyncChangeControlVisibility(prb_state, Visibility.Hidden);
+                    AsyncChangeControlState(prb_state, () => prb_state.Visibility = Visibility.Hidden);
                     Thread.CurrentThread.Abort();
                 }
                 SaveRequest(xmlResponse, i.ToString());
@@ -316,7 +301,7 @@ namespace PostWatcher
                 if (!newDocument.Success)
                 {
                     MessageBox.Show("Invalid API key");
-                    AsyncChangeControlVisibility(prb_state, Visibility.Hidden);
+                    AsyncChangeControlState(prb_state, () => prb_state.Visibility = Visibility.Hidden);
                     Thread.CurrentThread.Abort();
                 }
 
@@ -377,7 +362,7 @@ namespace PostWatcher
         {
             stateFilter.Remove("Змінено адресу");
         }
-        
+
         private void Chb_Sended_OnUnchecked(object sender, RoutedEventArgs e)
         {
             stateFilter.Add("Відправленно");
