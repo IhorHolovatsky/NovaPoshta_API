@@ -36,7 +36,7 @@ namespace PostWatcher
         private static string _modelName;
         private static string _methodName;
         private static DataItem filter = new DataItem();
-        private static List<Action> actions = new List<Action>();
+        private static List<string> stateFilter = new List<string>(10);
         private static Thread _newThread;
         private readonly IsolatedStorageFile _isolated = IsolatedStorageFile.GetUserStoreForAssembly();
 
@@ -49,7 +49,6 @@ namespace PostWatcher
                 rk = Registry.CurrentUser.CreateSubKey("PostWatcher");
                 var newWindwowApIkey = new APIkey();
                 newWindwowApIkey.ShowDialog();
-
             }
             else
             {
@@ -59,6 +58,7 @@ namespace PostWatcher
                     newWindwowApIkey.ShowDialog();
                 }
             }
+
             _APIKey = (string)rk.GetValue("API key");
 
             InitializeComponent();
@@ -71,26 +71,26 @@ namespace PostWatcher
             GetFiles();
         }
 
-        //Creating a function that uses the API function...
-
+        #region MENU EVENT HANDLER METHODS
         private void menuChangeAPIkey_OnClick(object sender, RoutedEventArgs e)
         {
             var newWindow = new APIkey();
             newWindow.ShowDialog();
             var rk = Registry.CurrentUser.OpenSubKey("PostWatcher");
-            _APIKey = (string) rk.GetValue("API key");
+            _APIKey = (string)rk.GetValue("API key");
 
         }
 
         private void menuExit_OnClick(object sender, RoutedEventArgs e)
         {
-            this.Close();
+            Application.Current.Shutdown();
         }
 
         private void menuResresh_OnClick(object sender, RoutedEventArgs e)
         {
-            throw new NotImplementedException();
+            Btn_OKfilter_OnClick(sender, e);
         }
+        #endregion
 
         private void AsyncChangeControlState(Control element, bool state)
         {
@@ -106,14 +106,127 @@ namespace PostWatcher
             if (element.Dispatcher.CheckAccess())
                 element.Visibility = state;
             else
-                prb_state.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(
+                prb_state.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
+                    new Action(
                     () => element.Visibility = state
-
-                    )
+                              )
                     );
         }
 
 
+
+        protected bool CheckConnection()
+        {
+            try
+            {
+                using (var client = new WebClient())
+                using (var stream = client.OpenRead("http://www.google.com"))
+                    return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void SaveRequest(XmlDocument xmlDocument, string name)
+        {
+            var writer = new XmlTextWriter(_isolated.CreateFile("Request" + name + ".xml"), Encoding.UTF8);
+            xmlDocument.Save(writer);
+            writer.Close();
+        }
+
+        private void GetFiles()
+        {
+            DG_doc.Items.Clear();
+
+            foreach (var xmlDoc in _isolated.GetFileNames().Select(ReadFile))
+            {
+                AddItemsToDataGrid(xmlDoc, filter);
+            }
+        }
+
+        private XmlDocument ReadFile(string file)
+        {
+            var fileStream = new XmlTextReader(_isolated.OpenFile(file, FileMode.Open, FileAccess.Read, FileShare.Write));
+            var xmlDoc = new XmlDocument();
+            xmlDoc.Load(fileStream);
+            fileStream.Close();
+            return xmlDoc;
+        }
+
+        private void AddItemsToDataGrid(XmlDocument xmlDocument, DataItem filterDocument)
+        {
+            var document = new Document();
+            document.LoadResposneXmlDocument(xmlDocument);
+
+            if (!document.Success || !document.HasData)
+                return;
+
+            foreach (var dataItem in document.Items)
+            {
+                if (!CompareTwoDocuments(dataItem, filterDocument)) continue;
+                if (stateFilter.Contains(dataItem.StateName)) continue;
+
+                if (DG_doc.Dispatcher.CheckAccess())
+                {
+                    DG_doc.Items.Add(dataItem);
+                }
+                else
+                {
+                    var thisValue = dataItem;
+                    DG_doc.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
+                        new Action(() => DG_doc.Items.Add(thisValue)));
+                }
+            }
+        }
+
+        private static bool CompareTwoDocuments(DataItem self, DataItem to)
+        {
+            if (self == null) return false;
+            if (to == null) return true;
+
+            var type = self.GetType();
+            var countOfEquals = 0;
+            var query = new List<object>();
+
+            foreach (var pi in type.GetProperties(BindingFlags.Public | BindingFlags.DeclaredOnly | BindingFlags.Instance))
+            {
+                var selfValue = type.GetProperty(pi.Name).GetValue(self, null);
+                var toValue = type.GetProperty(pi.Name).GetValue(to, null);
+
+                if (selfValue == null || toValue == null) continue;
+
+                var isDefault = toValue.Equals(GetDefault(pi.PropertyType));
+
+                if (!isDefault)
+                    countOfEquals++;
+
+                if (selfValue.Equals(toValue) && !isDefault)
+                {
+                    query.Add(selfValue);
+                }
+            }
+            return query.Count() == countOfEquals;
+        }
+
+        private static object GetDefault(Type t)
+        {
+            return t.IsValueType ? Activator.CreateInstance(t) : null;
+        }
+
+        #region BUTTONS
+        private void Btn_cancel_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (_newThread.IsAlive)
+                _newThread.Abort();
+            prb_state.Visibility = Visibility.Hidden;
+        }
+
+        private void Btn_OKfilter_OnClick(object sender, RoutedEventArgs e)
+        {
+            GetFiles();
+        }
 
         private void Btn_selectDataOK_OnClick(object sender, RoutedEventArgs e)
         {
@@ -131,13 +244,10 @@ namespace PostWatcher
             DateTime right = DatePickerRight.SelectedDate ?? DateTime.Today;
             prb_state.Value = 0;
 
-
             _newThread = new Thread(
                 () => _GetNovaPoshtaDocuments(left, right)
                                   );
             _newThread.Start();
-
-
         }
 
         private void _GetNovaPoshtaDocuments(DateTime left, DateTime right)
@@ -171,9 +281,10 @@ namespace PostWatcher
                 if (prb_state.Dispatcher.CheckAccess())
                     prb_state.Value += 1000.0 / ((right - left).Days + 1);
                 else
-                    prb_state.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(
-                        () => prb_state.Value += 1000.0 / ((right - left).Days + 1)
-                        )
+                    prb_state.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
+                        new Action(
+                            () => prb_state.Value += 1000.0 / ((right - left).Days + 1)
+                                  )
                         );
 
                 var current = left.AddDays(i);
@@ -209,151 +320,12 @@ namespace PostWatcher
                     Thread.CurrentThread.Abort();
                 }
 
-
                 AddItemsToDataGrid(xmlResponse, filter);
             }
         }
+        #endregion
 
-        protected bool CheckConnection()
-        {
-            try
-            {
-                using (var client = new WebClient())
-                using (var stream = client.OpenRead("http://www.google.com"))
-                    return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private void SaveRequest(XmlDocument xmlDocument, string name)
-        {
-
-            // var isolatedStream = new IsolatedStorageFileStream("Request" + name +".xml", FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
-            var writer = new XmlTextWriter(_isolated.CreateFile("Request" + name + ".xml"), Encoding.UTF8);
-            xmlDocument.Save(writer);
-            writer.Close();
-
-        }
-
-        private void GetFiles()
-        {
-            DG_doc.Items.Clear();
-
-            foreach (var xmlDoc in _isolated.GetFileNames().Select(ReadFile))
-            {
-                AddItemsToDataGrid(xmlDoc, filter);
-            }
-        }
-
-        private XmlDocument ReadFile(string file)
-        {
-            var fileStream = new XmlTextReader(_isolated.OpenFile(file, FileMode.Open, FileAccess.Read, FileShare.Write));
-            var xmlDoc = new XmlDocument();
-            xmlDoc.Load(fileStream);
-            fileStream.Close();
-            return xmlDoc;
-        }
-
-
-        private void AddItemsToDataGrid(XmlDocument xmlDocument, DataItem filterDocument)
-        {
-            var document = new Document();
-            document.LoadResposneXmlDocument(xmlDocument);
-
-
-            if (!document.Success)
-                return;
-
-            if (!document.HasData)
-                return;
-
-            foreach (var dataItem in document.Items)
-            {
-                if (!CompareTwoDocuments(dataItem, filterDocument)) continue;
-
-                if (DG_doc.Dispatcher.CheckAccess())
-                {
-
-                    DG_doc.Items.Add(dataItem);
-                }
-                else
-                {
-                    DataItem thisValue = dataItem;
-                    DG_doc.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
-                        new Action(() => DG_doc.Items.Add(thisValue)));
-                }
-            }
-
-        }
-
-        private static bool CompareTwoDocuments(DataItem self, DataItem to)
-        {
-            if (self == null) return false;
-            if (to == null) return true;
-
-            var type = self.GetType();
-            //var query = from pi in type.GetProperties(BindingFlags.Public)
-            //    let selfValue = type.GetProperty(pi.Name).GetValue(self, null)
-            //    let toValue = type.GetProperty(pi.Name).GetValue(to, null)
-            //    where (selfValue == toValue)
-            //    select selfValue;
-            int countOfEquals = 0;
-            List<object> query = new List<object>();
-
-            foreach (var pi in type.GetProperties(BindingFlags.Public | BindingFlags.DeclaredOnly | BindingFlags.Instance))
-            {
-                var selfValue = type.GetProperty(pi.Name).GetValue(self, null);
-                var toValue = type.GetProperty(pi.Name).GetValue(to, null);
-
-                if (selfValue == null || toValue == null) continue;
-
-
-                var isDefault = toValue.Equals(GetDefault(pi.PropertyType));
-
-                if (!isDefault)
-                    countOfEquals++;
-
-                if (selfValue.Equals(toValue) && !isDefault)
-                {
-                    query.Add(selfValue);
-                }
-            }
-
-            return query.Count() == countOfEquals;
-
-        }
-
-        private static object GetDefault(Type t)
-        {
-            //if (t == typeof(DateTime))
-            //    return DateTime.MinValue;
-            return t.IsValueType ? Activator.CreateInstance(t) : null;
-        }
-
-
-
-        private void Btn_cancel_OnClick(object sender, RoutedEventArgs e)
-        {
-            if (_newThread.IsAlive)
-                _newThread.Abort();
-            prb_state.Visibility = Visibility.Hidden;
-        }
-
-        private void Cb_StateName_OnSelected(object sender, RoutedEventArgs e)
-        {
-            var innerText = ((TextBlock)cb_StateName.SelectedItem).Text;
-            filter.StateName = innerText == "" ? null : innerText;
-        }
-
-
-        private void Btn_OKfilter_OnClick(object sender, RoutedEventArgs e)
-        {
-            GetFiles();
-        }
-
+        #region TEXTBOX ADD TO FILTER
         private void Tb_IntDoc_OnTextChanged(object sender, TextChangedEventArgs e)
         {
             filter.IntDocNumber = tb_IntDoc.Text != "" ? tb_IntDoc.Text : null;
@@ -369,8 +341,73 @@ namespace PostWatcher
         {
             filter.RecipientContactPhone = tb_RecipientPhone.Text != "" ? tb_RecipientPhone.Text : null;
         }
+        #endregion
 
+        #region COMBO_BOX OF STATE FILTER
+        private void Chb_delievered_OnChecked(object sender, RoutedEventArgs e)
+        {
+            stateFilter.Remove("Одержаний");
+        }
 
+        private void Chb_Proccessing_OnChecked(object sender, RoutedEventArgs e)
+        {
+
+            stateFilter.Remove("Замовлення в обробці");
+        }
+
+        private void Chb_WaitingForSending_OnChecked(object sender, RoutedEventArgs e)
+        {
+
+            stateFilter.Remove("Готується до відправлення");
+        }
+
+        private void Chb_ArrivedToRecipient_OnChecked(object sender, RoutedEventArgs e)
+        {
+
+            stateFilter.Remove("Прибув у відділення");
+        }
+
+        private void Chb_Sended_OnChecked(object sender, RoutedEventArgs e)
+        {
+
+            stateFilter.Remove("Відправленно");
+        }
+
+        private void Chb_AddressChanged_OnChecked(object sender, RoutedEventArgs e)
+        {
+            stateFilter.Remove("Змінено адресу");
+        }
+        
+        private void Chb_Sended_OnUnchecked(object sender, RoutedEventArgs e)
+        {
+            stateFilter.Add("Відправленно");
+        }
+
+        private void Chb_AddressChanged_OnUnchecked(object sender, RoutedEventArgs e)
+        {
+            stateFilter.Add("Змінено адресу");
+        }
+
+        private void Chb_ArrivedToRecipient_OnUnchecked(object sender, RoutedEventArgs e)
+        {
+            stateFilter.Add("Прибув у відділення");
+        }
+
+        private void Chb_WaitingForSending_OnUnchecked(object sender, RoutedEventArgs e)
+        {
+            stateFilter.Add("Готується до відправлення");
+        }
+
+        private void Chb_Proccessing_OnUnchecked(object sender, RoutedEventArgs e)
+        {
+            stateFilter.Add("Замовлення в обробці");
+        }
+
+        private void Chb_delievered_OnUnchecked(object sender, RoutedEventArgs e)
+        {
+            stateFilter.Add("Одержаний");
+        }
+        #endregion
     }
 }
 

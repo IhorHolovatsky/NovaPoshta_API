@@ -44,14 +44,21 @@
                                 <ColumnDefinition Width="40*"/>
                                 <ColumnDefinition Width="303*"/>
                             </Grid.ColumnDefinitions>
-                            <ComboBox x:Name="cb_StateName" HorizontalAlignment="Left" Margin="10,38,0,0" VerticalAlignment="Top" Width="177" Grid.ColumnSpan="2" RenderTransformOrigin="0.511,1.309" SelectionChanged="Cb_StateName_OnSelected">
-                                <TextBlock Text="Одержаний"/>
+                            <ComboBox x:Name="cb_StateName" HorizontalAlignment="Left" Margin="10,38,0,0" VerticalAlignment="Top" Width="177" Grid.ColumnSpan="2" RenderTransformOrigin="0.511,1.309" >
+                              
+                                <CheckBox Name="chb_delievered" IsChecked="True" Checked="Chb_delievered_OnChecked" Unchecked="Chb_delievered_OnUnchecked">Одержаний</CheckBox>
+                                <CheckBox Name="chb_Proccessing" IsChecked="True" Checked="Chb_Proccessing_OnChecked" Unchecked="Chb_Proccessing_OnUnchecked">Замовлення в обробці</CheckBox>
+                                <CheckBox Name="chb_WaitingForSending" IsChecked="True" Checked="Chb_WaitingForSending_OnChecked" Unchecked="Chb_WaitingForSending_OnUnchecked">Готується до відправлення</CheckBox>
+                                <CheckBox Name="chb_ArrivedToRecipient" IsChecked="True" Checked="Chb_ArrivedToRecipient_OnChecked" Unchecked="Chb_ArrivedToRecipient_OnUnchecked">Прибув у відділення</CheckBox>
+                                <CheckBox Name="chb_Sended" IsChecked="True" Checked="Chb_Sended_OnChecked" Unchecked="Chb_Sended_OnUnchecked">Відправленно</CheckBox>
+                                <CheckBox Name="chb_AddressChanged"  IsChecked="True" Checked="Chb_AddressChanged_OnChecked" Unchecked="Chb_AddressChanged_OnUnchecked">Змінено адресу</CheckBox>
+                                <!--<TextBlock Text="Одержаний"/>
                                 <TextBlock Text="Замовлення в обробці"/>
                                 <TextBlock Text="Готується до відправлення"/>
                                 <TextBlock Text="Прибув у відділення"/>
                                 <TextBlock Text="Відправленно"/>
                                 <TextBlock Text="Змінено адресу"/>
-                                <TextBlock Text=""/>
+                                <TextBlock Text=""/>-->
 
                             </ComboBox>
                             <ComboBox HorizontalAlignment="Left" Margin="10,96,0,0" VerticalAlignment="Top" Width="177" Grid.Column="1">

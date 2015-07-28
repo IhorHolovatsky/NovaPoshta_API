@@ -15,7 +15,6 @@ namespace PostWatcher
         private bool _success = false;
         private bool _hasData = false;
         private string _error;
-
         private List<DataItem> _items = new List<DataItem>();
 
         public List<DataItem> Items
@@ -45,8 +44,6 @@ namespace PostWatcher
         {
             get { return _error; }
         }
-
-
       
         public  XmlDocument SendRequestXmlDocument(XmlDocument xmlRequest)
         {
