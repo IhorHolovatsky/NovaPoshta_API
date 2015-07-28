@@ -109,6 +109,7 @@ namespace PostWatcher
                         node.InnerText = methodName;
                         break;
                     case "methodProperties":
+                        if (methodPropetries == null) break;
                         foreach (XmlNode propetry in methodPropetries)
                         {
                             node.AppendChild(xmlDocument.ImportNode(propetry, true)); 

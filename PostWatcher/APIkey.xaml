@@ -1,8 +1,11 @@
 ﻿<Window x:Class="PostWatcher.APIkey"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="APIkey" Height="300" Width="300">
+        Title="APIkey" Height="300" Width="322" WindowStyle="SingleBorderWindow" WindowState="Normal" ResizeMode="NoResize">
     <Grid>
-        
+        <Button Content="OK" HorizontalAlignment="Left" Margin="220,224,0,0" VerticalAlignment="Top" Width="81" Height="33" Click="ButtonBase_OnClick"/>
+        <TextBox x:Name="tb_input" HorizontalAlignment="Left" Height="23" Margin="10,105,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="291"/>
+        <Label Content="Введіть свій API ключ" HorizontalAlignment="Left" Margin="90,74,0,0" VerticalAlignment="Top" RenderTransformOrigin="-0.132,-0.269"/>
+
     </Grid>
 </Window>

@@ -22,6 +22,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using System.Xml;
+using Microsoft.Win32;
 using API_NovaPoshta = API_NovaPoshta.API_NovaPoshta;
 
 namespace PostWatcher
@@ -31,7 +32,7 @@ namespace PostWatcher
     /// </summary>
     public partial class MainWindow : Window
     {
-        private static string _APIKey = "fd00953407f9e0ac0c86a94cdc91c33c";
+        private static string _APIKey;
         private static string _modelName;
         private static string _methodName;
         private static DataItem filter = new DataItem();
@@ -41,6 +42,25 @@ namespace PostWatcher
 
         public MainWindow()
         {
+            var rk = Registry.CurrentUser.OpenSubKey("PostWatcher");
+
+            if (rk == null)
+            {
+                rk = Registry.CurrentUser.CreateSubKey("PostWatcher");
+                var newWindwowApIkey = new APIkey();
+                newWindwowApIkey.ShowDialog();
+
+            }
+            else
+            {
+                if (rk.GetValue("API key") == null)
+                {
+                    var newWindwowApIkey = new APIkey();
+                    newWindwowApIkey.ShowDialog();
+                }
+            }
+            _APIKey = (string)rk.GetValue("API key");
+
             InitializeComponent();
 
             DatePickerLeft.DisplayDateEnd = DateTime.Today;
@@ -55,12 +75,16 @@ namespace PostWatcher
 
         private void menuChangeAPIkey_OnClick(object sender, RoutedEventArgs e)
         {
-            throw new NotImplementedException();
+            var newWindow = new APIkey();
+            newWindow.ShowDialog();
+            var rk = Registry.CurrentUser.OpenSubKey("PostWatcher");
+            _APIKey = (string) rk.GetValue("API key");
+
         }
 
         private void menuExit_OnClick(object sender, RoutedEventArgs e)
         {
-            throw new NotImplementedException();
+            this.Close();
         }
 
         private void menuResresh_OnClick(object sender, RoutedEventArgs e)
@@ -176,6 +200,15 @@ namespace PostWatcher
                     Thread.CurrentThread.Abort();
                 }
                 SaveRequest(xmlResponse, i.ToString());
+                newDocument.LoadResposneXmlDocument(xmlResponse);
+
+                if (!newDocument.Success)
+                {
+                    MessageBox.Show("Invalid API key");
+                    AsyncChangeControlVisibility(prb_state, Visibility.Hidden);
+                    Thread.CurrentThread.Abort();
+                }
+
 
                 AddItemsToDataGrid(xmlResponse, filter);
             }
@@ -232,7 +265,7 @@ namespace PostWatcher
 
 
             if (!document.Success)
-                MessageBox.Show(document.Error);
+                return;
 
             if (!document.HasData)
                 return;
@@ -328,7 +361,7 @@ namespace PostWatcher
 
         private void Tb_RecipientCityDescription_OnTextChanged(object sender, TextChangedEventArgs e)
         {
-            filter.CityRecipientDescription = tb_RecipientCityDescription.Text != "" ? 
+            filter.CityRecipientDescription = tb_RecipientCityDescription.Text != "" ?
                 tb_RecipientCityDescription.Text : null;
         }
 
@@ -336,6 +369,8 @@ namespace PostWatcher
         {
             filter.RecipientContactPhone = tb_RecipientPhone.Text != "" ? tb_RecipientPhone.Text : null;
         }
+
+
     }
 }
 
