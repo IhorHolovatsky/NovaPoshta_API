@@ -7,7 +7,7 @@
         xml:lang="uk-UA"
         Title="MainWindow" WindowState="Maximized" WindowStyle="ThreeDBorderWindow"
         ResizeMode="CanResize" d:DesignWidth="1279.94" Height="963.881">
-    <StackPanel>
+    <StackPanel Background="AntiqueWhite">
 
         <StackPanel Name="Main" VerticalAlignment="Top" >
             <StackPanel Name="Menu"  VerticalAlignment="Top" HorizontalAlignment="Stretch">
@@ -24,9 +24,9 @@
 
                 </Menu>
             </StackPanel>
-            <StackPanel x:Name="InputRow" Orientation="Horizontal" Height="148">
+            <StackPanel x:Name="InputRow" Orientation="Horizontal" Height="148" >
                 <StackPanel x:Name="GroupBoxes" VerticalAlignment="Top" HorizontalAlignment="Left"  Orientation="Horizontal">
-                    <GroupBox Header="Search" BorderBrush="Crimson" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="6,3,6,3" Height="138" Width="361">
+                    <GroupBox Background="Cornsilk" Header="Search" BorderBrush="Crimson" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="10,3,6,3" Height="138" Width="361">
                         <Grid Margin="2,0,-2,1">
                             <DatePicker x:Name="DatePickerLeft"  HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" Width="136"/>
                             <Button x:Name="btn_selectDataOK" Content="OK" HorizontalAlignment="Left"  VerticalAlignment="Top" Width="69" Click="Btn_selectDataOK_OnClick" Margin="270,75,0,0" Height="30"/>
@@ -38,13 +38,13 @@
                         </Grid>
                     </GroupBox>
 
-                    <GroupBox Header="Filter" BorderBrush="Crimson" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="6,3,6,3">
+                    <GroupBox Background="Cornsilk" Header="Filter" BorderBrush="Crimson" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="6,3,6,3">
                         <Grid Margin="0,-6,-2,-6">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="40*"/>
                                 <ColumnDefinition Width="303*"/>
                             </Grid.ColumnDefinitions>
-                            <ComboBox x:Name="cb_StateName" HorizontalAlignment="Left" Margin="10,38,0,0" VerticalAlignment="Top" Width="177" Grid.ColumnSpan="2" RenderTransformOrigin="0.511,1.309" >
+                            <ComboBox x:Name="cb_StateName" HorizontalAlignment="Left" Margin="10,38,0,0" VerticalAlignment="Top" Width="177" Grid.ColumnSpan="2" RenderTransformOrigin="0.511,1.309" Text="Статуси які відображати" >
 
                                 <CheckBox Name="chb_delievered" IsChecked="True" Checked="Chb_delievered_OnChecked" Unchecked="Chb_delievered_OnUnchecked">Одержаний</CheckBox>
                                 <CheckBox Name="chb_Proccessing" IsChecked="True" Checked="Chb_Proccessing_OnChecked" Unchecked="Chb_Proccessing_OnUnchecked">Замовлення в обробці</CheckBox>
@@ -86,7 +86,7 @@
 
 
             <StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Top" Height="552">
-                <DataGrid Margin="0,10,0,0" x:Name="DG_doc" BorderBrush="Crimson" BorderThickness="10" CanUserResizeColumns="True" VerticalAlignment="Top"  HorizontalAlignment="Stretch" ItemsSource="{Binding}" GridLinesVisibility="All"  AutoGenerateColumns="False" Height="542">
+                <DataGrid Margin="10,10,10,10" x:Name="DG_doc" BorderBrush="Crimson" BorderThickness="2" CanUserResizeColumns="True" VerticalAlignment="Top"  HorizontalAlignment="Stretch" ItemsSource="{Binding}" GridLinesVisibility="All"  AutoGenerateColumns="False" Height="542">
                     <DataGrid.Columns >
 
                         <DataGridTextColumn SortMemberPath="IntDocNumber" Header = "Номер ТТН" Binding="{Binding IntDocNumber}" Width="150" CanUserResize="False">
