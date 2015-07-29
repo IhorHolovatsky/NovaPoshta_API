@@ -161,7 +161,7 @@
                         <DataGridTemplateColumn Header ="Додаткова інформація" CanUserResize="False" SortMemberPath="Description">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding CargoType, StringFormat=\{0\}}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" Margin="5,0,5,0"/>
+                                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" Margin="5,0,5,0"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
 

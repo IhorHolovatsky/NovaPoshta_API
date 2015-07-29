@@ -155,12 +155,12 @@ namespace PostWatcher
         private void AddItemsToDataGrid(XmlDocument xmlDocument, DataItem filterDocument)
         {
             var document = new Document();
-            document.LoadResposneXmlDocument(xmlDocument);
+            document.LoadResponseXmlDocument(xmlDocument);
 
             if (!document.Success || !document.HasData)
                 return;
 
-            foreach (var dataItem in document.Items)
+          foreach (var dataItem in document.Items)
             {
                 if (!CompareTwoDocuments(dataItem, filterDocument)) continue;
                 if (stateFilter.Contains(dataItem.StateName)) continue;
@@ -252,7 +252,7 @@ namespace PostWatcher
             AsyncChangeControlState(prb_state, () => prb_state.Visibility = Visibility.Visible);
             GetNovaPoshtaDocuments(left, right);
             AsyncChangeControlState(prb_state, () => prb_state.Visibility = Visibility.Hidden);
-           
+
             timer.Stop();
 
             AsyncChangeControlState(tb_state, () => tb_state.Text = "Затрачений час: " + timer.Elapsed.ToString("g"));
@@ -267,7 +267,7 @@ namespace PostWatcher
 
             for (int i = 0; i < (right - left).Days + 1; i++)
             {
-                var prbValue = 1000.0/((right - left).Days + 1);
+                var prbValue = 1000.0 / ((right - left).Days + 1);
                 AsyncChangeControlState(prb_state, () => prb_state.Value += prbValue);
 
                 var current = left.AddDays(i);
@@ -296,7 +296,7 @@ namespace PostWatcher
                     Thread.CurrentThread.Abort();
                 }
                 SaveRequest(xmlResponse, i.ToString());
-                newDocument.LoadResposneXmlDocument(xmlResponse);
+                newDocument.LoadResponseXmlDocument(xmlResponse);
 
                 if (!newDocument.Success)
                 {

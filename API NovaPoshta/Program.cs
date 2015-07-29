@@ -24,8 +24,8 @@ namespace API_NovaPoshta
             XmlDocument xmlRequest = new XmlDocument();
 
 
-            xmlRequest = API_NovaPoshta._makeXmlDocument("89d098a380862faab14d9196653823dc", "InternetDocument",
-               "getDocumentList", new Dictionary<string, string>() { { "DateTime", "" } });
+            xmlRequest = API_NovaPoshta._makeXmlDocument("fd00953407f9e0ac0c86a94cdc91c33c", "InternetDocument",
+               "getDocumentList", new Dictionary<string, string>() { { "DateTime", "23.07.2015" } });
 
             API_NovaPoshta._XmlReader(API_NovaPoshta._Request(xmlRequest));
 

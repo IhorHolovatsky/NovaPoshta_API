@@ -53,7 +53,7 @@ namespace PostWatcher
             //Properties of connection
             httpWebRequest.Method = "POST";
             httpWebRequest.ContentType = @"application/x-www-form-urlencoded";
-            httpWebRequest.Timeout = 4000;
+          //  httpWebRequest.Timeout = 12000;
             ServicePointManager.DefaultConnectionLimit = 1000;
 
             //Out stream
@@ -61,7 +61,7 @@ namespace PostWatcher
 
             streamOut.Write(xmlRequest.InnerXml);
 
-            streamOut.Flush();
+           // streamOut.Flush();
             streamOut.Close();
 
             //In Stream
@@ -120,7 +120,7 @@ namespace PostWatcher
             return xmlDocument;
         }
 
-        public void LoadResposneXmlDocument(XmlDocument xmlDoc)
+        public void LoadResponseXmlDocument(XmlDocument xmlDoc)
         {
 
             var query = from XmlNode x in xmlDoc.DocumentElement.ChildNodes
