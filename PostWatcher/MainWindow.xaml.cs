@@ -7,31 +7,20 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
-
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 using System.Xml;
 using Microsoft.Win32;
-using API_NovaPoshta = API_NovaPoshta.API_NovaPoshta;
 
 namespace PostWatcher
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow
     {
         private static string _APIKey;
         private static string _modelName;
@@ -116,6 +105,7 @@ namespace PostWatcher
         {
             try
             {
+              
                 using (var client = new WebClient())
                 using (var stream = client.OpenRead("http://www.google.com"))
                     return true;
@@ -146,10 +136,14 @@ namespace PostWatcher
         private XmlDocument ReadFile(string file)
         {
             var fileStream = new XmlTextReader(_isolated.OpenFile(file, FileMode.Open, FileAccess.Read, FileShare.Write));
+            
+            
             var xmlDoc = new XmlDocument();
             xmlDoc.Load(fileStream);
             fileStream.Close();
             return xmlDoc;
+
+             
         }
 
         private void AddItemsToDataGrid(XmlDocument xmlDocument, DataItem filterDocument)
@@ -223,11 +217,7 @@ namespace PostWatcher
                 if (_newThread.IsAlive)
                     return;
 
-            if (!CheckConnection())
-            {
-                MessageBox.Show("No Internet Connection!");
-                return;
-            }
+         
 
             DateTime left = DatePickerLeft.SelectedDate ?? DateTime.Today;
             DateTime right = DatePickerRight.SelectedDate ?? DateTime.Today;
@@ -241,6 +231,14 @@ namespace PostWatcher
 
         private void _GetNovaPoshtaDocuments(DateTime left, DateTime right)
         {
+            AsyncChangeControlState(tb_state, () => tb_state.Text = "Перевірка з'єднання з інтернетом...");
+      
+            if (!CheckConnection())
+            {
+                MessageBox.Show("No Internet Connection!");
+                return;
+            }
+
             foreach (var file in _isolated.GetFileNames())
             {
                 _isolated.DeleteFile(file);
@@ -304,6 +302,7 @@ namespace PostWatcher
                     AsyncChangeControlState(prb_state, () => prb_state.Visibility = Visibility.Hidden);
                     Thread.CurrentThread.Abort();
                 }
+
 
                 AddItemsToDataGrid(xmlResponse, filter);
             }
