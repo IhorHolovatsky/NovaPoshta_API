@@ -44,7 +44,40 @@ namespace PostWatcher
         {
             get { return _error; }
         }
-      
+
+        public async Task<XmlDocument> SendRequestXmlDocumentAsync(XmlDocument xmlRequest)
+        {
+          
+            var httpWebRequest = (HttpWebRequest)WebRequest.Create("https://api.novaposhta.ua/v2.0/xml/");
+            httpWebRequest.Method = "POST";
+            httpWebRequest.ContentType = @"application/x-www-form-urlencoded";
+            ServicePointManager.DefaultConnectionLimit = 2000;
+
+            //Out stream
+            var streamOut = new StreamWriter(await httpWebRequest.GetRequestStreamAsync());
+            await streamOut.WriteAsync(xmlRequest.InnerXml);
+
+            // streamOut.Flush();
+            streamOut.Close();
+
+            //In Stream
+            var response = (await httpWebRequest.GetResponseAsync()).GetResponseStream();
+
+            if (response == null)
+                return null;
+
+            var streamIn = new StreamReader(response);
+
+            string strResponse = await streamIn.ReadToEndAsync();
+            streamIn.Close();
+            response.Close();
+
+            //Load XML data to XmlDocument
+            var xmlResponse = new XmlDocument();
+            xmlResponse.LoadXml(strResponse);
+
+            return xmlResponse;
+        }
         public  XmlDocument SendRequestXmlDocument(XmlDocument xmlRequest)
         {
             //HttpWebRequest to a Web Service
@@ -119,6 +152,7 @@ namespace PostWatcher
 
             return xmlDocument;
         }
+
 
         public void LoadResponseXmlDocument(XmlDocument xmlDoc)
         {

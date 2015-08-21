@@ -6,7 +6,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d" x:Class="PostWatcher.MainWindow"
         xml:lang="uk-UA"
         Title="MainWindow" WindowState="Maximized" WindowStyle="ThreeDBorderWindow"
-        ResizeMode="CanResize" d:DesignWidth="1279.94" Height="963.881">
+        ResizeMode="CanResize" d:DesignWidth="1279.94" Height="963.881" Loaded="MainWindow_OnLoaded" >
     <StackPanel Background="AntiqueWhite">
 
         <StackPanel Name="Main" VerticalAlignment="Top" >
