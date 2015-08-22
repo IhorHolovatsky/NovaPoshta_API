@@ -4,19 +4,25 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Serialization;
 
 namespace PostWatcher
 {
+    [Serializable]
+    [DataContract]
     class Document
     {
+
         private bool _success = false;
         private bool _hasData = false;
         private string _error;
         private List<DataItem> _items = new List<DataItem>();
 
+        [DataMember]
         public List<DataItem> Items
         {
             get
@@ -28,26 +34,28 @@ namespace PostWatcher
             private set { _items = value; }
         }
 
+        [DataMember]
         public bool Success
         {
             get { return _success; }
             private set { _success = value; }
         }
-
+        [DataMember]
         public bool HasData
         {
             get { return _hasData; }
             private set { _hasData = value; }
         }
-
+        [DataMember]
         public string Error
         {
             get { return _error; }
+            private set { _error = value; }
         }
 
         public async Task<XmlDocument> SendRequestXmlDocumentAsync(XmlDocument xmlRequest)
         {
-          
+
             var httpWebRequest = (HttpWebRequest)WebRequest.Create("https://api.novaposhta.ua/v2.0/xml/");
             httpWebRequest.Method = "POST";
             httpWebRequest.ContentType = @"application/x-www-form-urlencoded";
@@ -78,7 +86,7 @@ namespace PostWatcher
 
             return xmlResponse;
         }
-        public  XmlDocument SendRequestXmlDocument(XmlDocument xmlRequest)
+        public XmlDocument SendRequestXmlDocument(XmlDocument xmlRequest)
         {
             //HttpWebRequest to a Web Service
             var httpWebRequest = (HttpWebRequest)WebRequest.Create("https://api.novaposhta.ua/v2.0/xml/");
@@ -86,7 +94,7 @@ namespace PostWatcher
             //Properties of connection
             httpWebRequest.Method = "POST";
             httpWebRequest.ContentType = @"application/x-www-form-urlencoded";
-          //  httpWebRequest.Timeout = 12000;
+            //  httpWebRequest.Timeout = 12000;
             ServicePointManager.DefaultConnectionLimit = 1000;
 
             //Out stream
@@ -94,7 +102,7 @@ namespace PostWatcher
 
             streamOut.Write(xmlRequest.InnerXml);
 
-           // streamOut.Flush();
+            // streamOut.Flush();
             streamOut.Close();
 
             //In Stream
@@ -104,7 +112,7 @@ namespace PostWatcher
                 return null;
 
             var streamIn = new StreamReader(response);
-           
+
             string strResponse = streamIn.ReadToEnd();
             streamIn.Close();
             response.Close();
@@ -142,9 +150,9 @@ namespace PostWatcher
                         if (methodPropetries == null) break;
                         foreach (XmlNode propetry in methodPropetries)
                         {
-                            node.AppendChild(xmlDocument.ImportNode(propetry, true)); 
+                            node.AppendChild(xmlDocument.ImportNode(propetry, true));
                         }
-                       
+
                         break;
                 }
             }
@@ -205,6 +213,7 @@ namespace PostWatcher
             }
 
         }
+
 
     }
 }

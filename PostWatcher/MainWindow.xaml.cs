@@ -8,6 +8,8 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Reflection;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +18,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Threading;
 using System.Xml;
+using System.Xml.Serialization;
 using Microsoft.Win32;
 
 namespace PostWatcher
@@ -25,15 +28,17 @@ namespace PostWatcher
     /// </summary>
     public partial class MainWindow
     {
-        private static string _APIKey;
-        private static string _modelName;
-        private static string _methodName;
-        private static DataItem filter = new DataItem();
-        private static List<string> stateFilter = new List<string>(10);
+        private string _APIKey;
+        private string _modelName;
+        private string _methodName;
+        private DataItem filter = new DataItem();
+        private List<Document> responseDocuments = new List<Document>(7);
+        private List<string> stateFilter = new List<string>(10);
         private readonly IsolatedStorageFile _isolated = IsolatedStorageFile.GetUserStoreForAssembly();
         private object locker = new Object();
         private Task findTask;
         private CancellationTokenSource cts;
+
 
 
         public MainWindow()
@@ -119,32 +124,21 @@ namespace PostWatcher
             }
         }
 
-        private void SaveRequest(XmlDocument xmlDocument, string name)
+        private void GetFiles()
         {
             lock (locker)
             {
-                var writer = new XmlTextWriter(_isolated.CreateFile("Request" + name + ".xml"), Encoding.UTF8);
-                xmlDocument.Save(writer);
-                writer.Close();
+                foreach (var fileName in _isolated.GetFileNames())
+                {
+                    var stream = _isolated.OpenFile(fileName, FileMode.Open, FileAccess.Read, FileShare.Write);
+                    var binnaryFormatter = new BinaryFormatter();
+
+                    var responseList = (List<Document>) binnaryFormatter.Deserialize(stream);
+
+                    foreach (var document in responseList)
+                        AddItemsToDataGrid(document, filter);
+                }
             }
-        }
-
-        private void GetFiles()
-        {
-            foreach (var xmlDoc in _isolated.GetFileNames().Select(ReadFile))
-            {
-                AddItemsToDataGrid(xmlDoc, filter);
-            }
-        }
-
-        private XmlDocument ReadFile(string file)
-        {
-            var fileStream = new XmlTextReader(_isolated.OpenFile(file, FileMode.Open, FileAccess.Read, FileShare.Write));
-
-            var xmlDoc = new XmlDocument();
-            xmlDoc.Load(fileStream);
-            fileStream.Close();
-            return xmlDoc;
         }
 
         private void AddItemsToDataGrid(XmlDocument xmlDocument, DataItem filterDocument)
@@ -152,6 +146,21 @@ namespace PostWatcher
             var document = new Document();
             document.LoadResponseXmlDocument(xmlDocument);
 
+            if (!document.Success || !document.HasData)
+                return;
+
+            foreach (var dataItem in document.Items)
+            {
+                if (!CompareTwoDocuments(dataItem, filterDocument)) continue;
+                if (stateFilter.Contains(dataItem.StateName)) continue;
+
+                var thisValue = dataItem;
+                AsyncChangeControlState(DG_doc, () => DG_doc.Items.Add(thisValue));
+            }
+        }
+
+        private void AddItemsToDataGrid(Document document, DataItem filterDocument)
+        {
             if (!document.Success || !document.HasData)
                 return;
 
@@ -241,13 +250,27 @@ namespace PostWatcher
                 cts.Dispose();
             }
 
-        btn_selectDataOK.IsEnabled = true;
+            await Task.Factory.StartNew(() =>
+            {
+                var fileStream = _isolated.CreateFile(DateTime.Today.ToString("yy-MM-dd") + " - " + _APIKey + ".data");
+                //var dataContractSerializer = new DataContractSerializer(typeof(List<Document>));
+                //var xmlStream = XmlWriter.Create(a);
+                //dataContractSerializer.WriteObject(xmlStream, responseDocuments);
+                //xmlStream.Close();
+
+                var binnaryFormatter = new BinaryFormatter();
+                binnaryFormatter.Serialize(fileStream, responseDocuments);
+
+                fileStream.Close();
+            });
+
+            btn_selectDataOK.IsEnabled = true;
         }
         private async Task _GetNovaPoshtaDocuments(DateTime left, DateTime right)
         {
             tb_state.Text = "Перевірка з'єднання з інтернетом...";
 
-            
+
             bool isInternetConnection = await CheckConnectionAsync();
             if (!isInternetConnection)
             {
@@ -284,6 +307,8 @@ namespace PostWatcher
 
             _modelName = "InternetDocument";
             _methodName = "getDocumentList";
+
+            responseDocuments.Clear();
 
             var makeTasks = await Task<IEnumerable<Task<XmlDocument>>>.Factory.StartNew(
                 () =>
@@ -331,6 +356,7 @@ namespace PostWatcher
             XmlDocument xmlResponse = null;
             try
             {
+                Thread.Sleep(new Random().Next(50));
                 xmlResponse = await newDocument.SendRequestXmlDocumentAsync(xmlQuery);
 
 
@@ -342,8 +368,10 @@ namespace PostWatcher
                 Thread.CurrentThread.Abort();
             }
 
-            await Task.Factory.StartNew(() => SaveRequest(xmlResponse, i.ToString()));
+
             newDocument.LoadResponseXmlDocument(xmlResponse);
+
+            responseDocuments.Add(newDocument);
 
             if (!newDocument.Success)
             {
