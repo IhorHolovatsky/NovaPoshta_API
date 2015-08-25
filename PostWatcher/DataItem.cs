@@ -374,7 +374,7 @@ namespace PostWatcher
         public string StateName
         {
             get { return _stateName; }
-            private set { _stateName = value; }
+            set { _stateName = value; }
         }
         [DataMember]
         public string RecipientFullName
@@ -512,7 +512,7 @@ namespace PostWatcher
         public string PrintedDescription
         {
             get { return _printedDescription; }
-            private set { _printedDescription = value; }
+            set { _printedDescription = value; }
         }
 
 

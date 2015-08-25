@@ -14,13 +14,26 @@ namespace PostWatcher
 {
     [Serializable]
     [DataContract]
-    class Document
+    internal class Document
     {
 
         private bool _success = false;
         private bool _hasData = false;
         private string _error;
         private List<DataItem> _items = new List<DataItem>();
+
+        [DataMember]
+        public DateTime Date
+        {
+            get
+            {
+                if (_items.Count != 0)
+                    return _items.Single().DateTime;
+
+                return DateTime.MinValue;
+            }
+            private set { }
+        }
 
         [DataMember]
         public List<DataItem> Items

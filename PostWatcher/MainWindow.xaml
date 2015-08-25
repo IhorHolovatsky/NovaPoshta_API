@@ -86,7 +86,7 @@
 
 
             <StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Top" Height="552">
-                <DataGrid Margin="10,10,10,10" x:Name="DG_doc" BorderBrush="Crimson" BorderThickness="2" CanUserResizeColumns="True" VerticalAlignment="Top"  HorizontalAlignment="Stretch" ItemsSource="{Binding}" GridLinesVisibility="All"  AutoGenerateColumns="False" Height="542">
+                <DataGrid Margin="10,10,10,10" x:Name="DG_doc" IsReadOnly="True" BorderBrush="Crimson"  BorderThickness="2"  CanUserResizeColumns="True" VerticalAlignment="Top"  HorizontalAlignment="Stretch" ItemsSource="{Binding}" GridLinesVisibility="All"  AutoGenerateColumns="False" Height="542">
                     <DataGrid.Columns  >
 
                         <DataGridTextColumn SortMemberPath="IntDocNumber" Header = "Номер ТТН" Binding="{Binding IntDocNumber}" Width="150" CanUserResize="False">
@@ -205,6 +205,19 @@
                         </DataGridTemplateColumn>
 
                     </DataGrid.Columns>
+                    <DataGrid.Resources>
+                        <ContextMenu  x:Key="DataRowContextMenu">
+                            <MenuItem   Header="Refresh" Click="MenuItem_OnClick">
+                                
+                            </MenuItem>
+                            </ContextMenu>
+                    </DataGrid.Resources>
+                    <DataGrid.RowStyle >
+                        <Style TargetType="{x:Type DataGridRow}">
+                            <Setter Property="ContextMenu" Value="{StaticResource DataRowContextMenu}" />
+                        </Style>
+                    </DataGrid.RowStyle>
+
 
                 </DataGrid>
             </StackPanel>
@@ -216,7 +229,7 @@
                                 <ColumnDefinition Width="200" />
                                 <ColumnDefinition Width="10" />
                                 <ColumnDefinition/>
-                          
+
 
                             </Grid.ColumnDefinitions>
                         </Grid>

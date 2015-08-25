@@ -1,0 +1,11 @@
+﻿<Window x:Class="PostWatcher.Loading"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Loading..." Height="138" Width="476" WindowStyle="None" BorderThickness="0" Loaded="Loading_OnLoaded">
+    <Grid>
+        <ProgressBar x:Name="pb_state" HorizontalAlignment="Left" Height="36" Margin="10,41,0,0" VerticalAlignment="Top" Width="448"/>
+        <Label x:Name="l_state" Content="" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" RenderTransformOrigin="-0.237,0.231"/>
+        <Button x:Name="btn_cancel" Content="Cancel" HorizontalAlignment="Left" Margin="363,94,0,0" Click="Btn_cancel_OnClick" VerticalAlignment="Top" Width="95" Height="26"/>
+
+    </Grid>
+</Window>

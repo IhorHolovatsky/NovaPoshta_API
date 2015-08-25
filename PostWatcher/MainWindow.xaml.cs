@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Threading;
 using System.Xml;
 using System.Xml.Serialization;
@@ -28,53 +29,70 @@ namespace PostWatcher
     /// </summary>
     public partial class MainWindow
     {
+
+        //USE DATA BASEE!!!!!!!!!!!!!
+
+
         private string _APIKey;
-        private string _modelName;
-        private string _methodName;
         private DataItem filter = new DataItem();
         private List<Document> responseDocuments = new List<Document>(7);
+        private DateBaseOfDocuments dbDocs;
         private List<string> stateFilter = new List<string>(10);
         private readonly IsolatedStorageFile _isolated = IsolatedStorageFile.GetUserStoreForAssembly();
         private object locker = new Object();
         private Task findTask;
         private CancellationTokenSource cts;
 
-
-
         public MainWindow()
         {
-
             InitializeComponent();
 
             DatePickerLeft.DisplayDateEnd = DateTime.Today;
             DatePickerLeft.SelectedDate = DateTime.Today;
             DatePickerRight.DisplayDateEnd = DateTime.Today;
             DatePickerRight.SelectedDate = DateTime.Today;
-
         }
         private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
         {
             var rk = Registry.CurrentUser.OpenSubKey("PostWatcher");
+            bool isLogined = true;
 
             if (rk == null)
             {
                 rk = Registry.CurrentUser.CreateSubKey("PostWatcher");
-                var newWindwowApIkey = new APIkey();
-                newWindwowApIkey.ShowDialog();
+                isLogined = false;
             }
             else
-            {
                 if (rk.GetValue("API key") == null)
-                {
-                    var newWindwowApIkey = new APIkey();
-                    newWindwowApIkey.ShowDialog();
-                }
+                    isLogined = false;
+
+
+            if (!isLogined)
+            {
+                var newWindwowApIkey = new APIkey();
+                newWindwowApIkey.ShowDialog();
+                _APIKey = (string)rk.GetValue("API key");
+
+                OpenLoader("RefreshDataBase");
             }
 
             _APIKey = (string)rk.GetValue("API key");
 
-            DG_doc.Items.Clear();
-            await Task.Factory.StartNew(GetFiles);
+            dbDocs = await GetFiles();
+
+            await Task.Factory.StartNew(
+                () => AddItemsToDataGrid(dbDocs.Documents, filter)
+                                       );
+
+            if (dbDocs.Dates.Max < DateTime.Today)
+                OpenLoader("RefreshDateBase");
+
+        }
+
+        private void OpenLoader(string methodName)
+        {
+            var newLoading = new Loading(_APIKey, methodName);
+            newLoading.ShowDialog();
         }
 
         #region MENU EVENT HANDLER METHODS
@@ -113,7 +131,6 @@ namespace PostWatcher
         {
             try
             {
-
                 using (var client = new WebClient())
                 using (var stream = await client.OpenReadTaskAsync("http://www.google.com"))
                     return true;
@@ -124,24 +141,24 @@ namespace PostWatcher
             }
         }
 
-        private void GetFiles()
+        private async Task<DateBaseOfDocuments> GetFiles()
         {
+            string[] fileNames;
+            string fileName = String.Empty;
             lock (locker)
             {
-                foreach (var fileName in _isolated.GetFileNames())
-                {
-                    var stream = _isolated.OpenFile(fileName, FileMode.Open, FileAccess.Read, FileShare.Write);
-                    var binnaryFormatter = new BinaryFormatter();
+                fileNames = _isolated.GetFileNames();
 
-                    var responseList = (List<Document>) binnaryFormatter.Deserialize(stream);
+                if (fileNames.Length == 0)
+                    return null;
 
-                    foreach (var document in responseList)
-                        AddItemsToDataGrid(document, filter);
-                }
+                fileName = fileNames.Single((fileN) => fileN == _APIKey);
             }
+
+            return await DeSerializeDocuments(fileName);
         }
 
-        private void AddItemsToDataGrid(XmlDocument xmlDocument, DataItem filterDocument)
+        private void AddItemsToDataGrid(XmlDocument xmlDocument, DataItem filterItem)
         {
             var document = new Document();
             document.LoadResponseXmlDocument(xmlDocument);
@@ -151,30 +168,48 @@ namespace PostWatcher
 
             foreach (var dataItem in document.Items)
             {
-                if (!CompareTwoDocuments(dataItem, filterDocument)) continue;
+                if (!CompareTwoItems(dataItem, filterItem)) continue;
                 if (stateFilter.Contains(dataItem.StateName)) continue;
 
                 var thisValue = dataItem;
                 AsyncChangeControlState(DG_doc, () => DG_doc.Items.Add(thisValue));
             }
         }
+    
+        private void AddItemsToDataGrid(List<Document> docs, DataItem filterItem)
+        {
+            foreach (var doc in docs)
+            {
+                AddItemsToDataGrid(doc, filterItem);
+            }
+        }
 
-        private void AddItemsToDataGrid(Document document, DataItem filterDocument)
+        private void AddItemsToDataGrid(Document document, DataItem filterItem)
         {
             if (!document.Success || !document.HasData)
                 return;
 
-            foreach (var dataItem in document.Items)
-            {
-                if (!CompareTwoDocuments(dataItem, filterDocument)) continue;
-                if (stateFilter.Contains(dataItem.StateName)) continue;
+            AddItemsToDataGrid(document.Items, filterItem);
+        }
 
-                var thisValue = dataItem;
-                AsyncChangeControlState(DG_doc, () => DG_doc.Items.Add(thisValue));
+        private void AddItemsToDataGrid(List<DataItem> items, DataItem filterItem)
+        {
+            foreach (var item in items)
+            {
+                AddItemsToDataGrid(item, filterItem);
             }
         }
 
-        private static bool CompareTwoDocuments(DataItem self, DataItem to)
+        private void AddItemsToDataGrid(DataItem item, DataItem filterItem)
+        {
+            if (!CompareTwoItems(item, filterItem)) return;
+            if (stateFilter.Contains(item.StateName)) return;
+
+            var thisValue = item;
+            AsyncChangeControlState(DG_doc, () => DG_doc.Items.Add(thisValue));
+        }
+
+        private static bool CompareTwoItems (DataItem self, DataItem to)
         {
             if (self == null) return false;
             if (to == null) return true;
@@ -213,175 +248,35 @@ namespace PostWatcher
 
         private void Btn_cancel_OnClick(object sender, RoutedEventArgs e)
         {
-            if (findTask == null) return;
-            if (findTask.IsCompleted) return;
-
-            cts.Cancel();
+           
         }
 
         private async void Btn_OKfilter_OnClick(object sender, RoutedEventArgs e)
         {
+            var items = DG_doc.Items.Cast<DataItem>().ToList();
             DG_doc.Items.Clear();
             btn_OKfilter.IsEnabled = false;
-            await Task.Factory.StartNew(GetFiles);
+            await Task.Factory.StartNew(() => AddItemsToDataGrid(items, filter));
             btn_OKfilter.IsEnabled = true;
         }
 
         private async void Btn_selectDataOK_OnClick(object sender, RoutedEventArgs e)
         {
-            DateTime left = DatePickerLeft.SelectedDate ?? DateTime.Today;
-            DateTime right = DatePickerRight.SelectedDate ?? DateTime.Today;
-            prb_state.Value = 0;
-
-            btn_selectDataOK.IsEnabled = false;
-            cts = new CancellationTokenSource();
-            try
-            {
-                findTask = _GetNovaPoshtaDocuments(left, right);
-                await findTask;
-            }
-            catch (OperationCanceledException exception)
-            {
-                tb_state.Text = "Відмінено";
-                prb_state.Visibility = Visibility.Hidden;
-            }
-            finally
-            {
-                cts.Dispose();
-            }
-
-            await Task.Factory.StartNew(() =>
-            {
-                var fileStream = _isolated.CreateFile(DateTime.Today.ToString("yy-MM-dd") + " - " + _APIKey + ".data");
-                //var dataContractSerializer = new DataContractSerializer(typeof(List<Document>));
-                //var xmlStream = XmlWriter.Create(a);
-                //dataContractSerializer.WriteObject(xmlStream, responseDocuments);
-                //xmlStream.Close();
-
-                var binnaryFormatter = new BinaryFormatter();
-                binnaryFormatter.Serialize(fileStream, responseDocuments);
-
-                fileStream.Close();
-            });
-
-            btn_selectDataOK.IsEnabled = true;
-        }
-        private async Task _GetNovaPoshtaDocuments(DateTime left, DateTime right)
-        {
-            tb_state.Text = "Перевірка з'єднання з інтернетом...";
-
-
-            bool isInternetConnection = await CheckConnectionAsync();
-            if (!isInternetConnection)
-            {
-                MessageBox.Show("No Internet Connection!");
-                tb_state.Text = "No Internet Connection!";
-                return;
-            }
-            tb_state.Text = "Запит обробляється...";
-
-            await Task.Factory.StartNew(() =>
-              {
-                  foreach (var file in _isolated.GetFileNames())
-                  {
-                      _isolated.DeleteFile(file);
-                  }
-
-              });
-
-            var timer = new Stopwatch();
-            timer.Start();
-
-            prb_state.Visibility = Visibility.Visible;
-            await GetNovaPoshtaDocuments(left, right);
-            prb_state.Visibility = Visibility.Hidden;
-
-            timer.Stop();
-
-            tb_state.Text = "Затрачений час: " + timer.Elapsed.ToString("g");
-        }
-
-        private async Task GetNovaPoshtaDocuments(DateTime left, DateTime right)
-        {
             DG_doc.Items.Clear();
 
-            _modelName = "InternetDocument";
-            _methodName = "getDocumentList";
+            DateTime left = DatePickerLeft.SelectedDate ?? DateTime.Today;
+            DateTime right = DatePickerRight.SelectedDate ?? DateTime.Today;
 
-            responseDocuments.Clear();
+            await Task.Factory.StartNew(() =>
+            {
+                var query = from x in dbDocs.Documents
+                    where (x.Date >= left) && (x.Date <= right)
+                    select x;
 
-            var makeTasks = await Task<IEnumerable<Task<XmlDocument>>>.Factory.StartNew(
-                () =>
-                {
-                    IEnumerable<Task<XmlDocument>> a = from x in Enumerable.Range(0, (right - left).Days + 1)
-                                                       select MakeTask(left, x);
-                    return a;
-                }
-                );
-
-            await Task.Factory.StartNew(
-                () =>
-                {
-                    List<Task<XmlDocument>> b = makeTasks.ToList();
-
-                    while (b.Count > 0)
-                    {
-                        var task = Task.WhenAny(b);
-
-                        b.Remove(task.Result);
-                        AddItemsToDataGrid(task.Result.Result, filter);
-
-                        AsyncChangeControlState(prb_state, () => prb_state.Value += 1000.0 / ((right - left).Days + 1));
-
-                        if (cts.IsCancellationRequested)
-                            cts.Token.ThrowIfCancellationRequested();
-                    }
-                });
+                AddItemsToDataGrid(query.ToList(), filter);
+            });
         }
 
-        private async Task<XmlDocument> MakeTask(DateTime left, int i)
-        {
-
-            var current = left.AddDays(i);
-            var xmlDoc = new XmlDocument();
-            var methodPropetriesNode = xmlDoc.CreateNode(XmlNodeType.Element, "DateTime",
-                null);
-            methodPropetriesNode.InnerText = String.Format("{0}.{1}.{2}", current.Day, current.Month, current.Year);
-            xmlDoc.AppendChild(methodPropetriesNode);
-            XmlNodeList xmlList = xmlDoc.ChildNodes;
-
-            var newDocument = new Document();
-            var xmlQuery = newDocument.MakeRequestXmlDocument(_APIKey, _modelName, _methodName, xmlList);
-
-            XmlDocument xmlResponse = null;
-            try
-            {
-                Thread.Sleep(new Random().Next(50));
-                xmlResponse = await newDocument.SendRequestXmlDocumentAsync(xmlQuery);
-
-
-            }
-            catch (WebException e)
-            {
-                MessageBox.Show(e.Message);
-                AsyncChangeControlState(prb_state, () => prb_state.Visibility = Visibility.Hidden);
-                Thread.CurrentThread.Abort();
-            }
-
-
-            newDocument.LoadResponseXmlDocument(xmlResponse);
-
-            responseDocuments.Add(newDocument);
-
-            if (!newDocument.Success)
-            {
-                MessageBox.Show("Invalid API key");
-                AsyncChangeControlState(prb_state, () => prb_state.Visibility = Visibility.Hidden);
-                Thread.CurrentThread.Abort();
-            }
-
-            return xmlResponse;
-        }
         #endregion
 
         #region TEXTBOX ADD TO FILTER
@@ -468,6 +363,77 @@ namespace PostWatcher
             stateFilter.Add("Одержаний");
         }
         #endregion
+
+        #region DataGrid events
+
+
+        private async void MenuItem_OnClick(object sender, RoutedEventArgs e)
+        {
+            var selectedItems = DG_doc.SelectedItems.Cast<DataItem>().ToList();
+            var dataGridItems = DG_doc.Items;
+
+
+
+            var newXmlDocument = await Task<List<DataItem>>.Factory.StartNew(() =>
+            {
+                var methodPrepetries = CreateXmlListPropertiesForDocumentsTracking(selectedItems);
+
+                var task = MakeTask("InternetDocument", "documentsTracking", methodPrepetries);
+
+                var document = new Document();
+                document.LoadResponseXmlDocument(task.Result);
+
+                return document.Items;
+            });
+
+            for (var i = 0; i < selectedItems.Count; i++)
+            {
+                var index = dataGridItems.IndexOf(selectedItems[i]);
+                selectedItems[i].StateName = newXmlDocument[i].StateName;
+                //  var oldResponseList = await DeSerializeDocuments();
+                dataGridItems[index] = selectedItems[i];
+            }
+        }
+
+
+        #endregion
+
+        private async Task<DateBaseOfDocuments> DeSerializeDocuments(string fileName)
+        {
+            var stream = _isolated.OpenFile(fileName, FileMode.Open, FileAccess.Read, FileShare.Write);
+            var binnaryFormatter = new BinaryFormatter();
+
+            var responseList = binnaryFormatter.Deserialize(stream) as DateBaseOfDocuments;
+            return responseList;
+        }
+
+        private XmlNodeList CreateXmlListPropertiesForGetDocuments(DateTime left, int x)
+        {
+            var current = left.AddDays(x);
+            var xmlDoc = new XmlDocument();
+            var methodPropetriesNode = xmlDoc.CreateNode(XmlNodeType.Element, "DateTime", null);
+            methodPropetriesNode.InnerText = String.Format("{0}.{1}.{2}", current.Day, current.Month, current.Year);
+            xmlDoc.AppendChild(methodPropetriesNode);
+            XmlNodeList xmlList = xmlDoc.ChildNodes;
+            return xmlList;
+        }
+
+        private XmlNodeList CreateXmlListPropertiesForDocumentsTracking(List<DataItem> selectItems)
+        {
+            var xmlDoc = new XmlDocument();
+            var methodPropetriesNode = xmlDoc.CreateNode(XmlNodeType.Element, "Documents", null);
+            foreach (var item in selectItems)
+            {
+                var newItem = xmlDoc.CreateNode(XmlNodeType.Element, "item", null);
+                newItem.InnerText = item.IntDocNumber;
+                methodPropetriesNode.AppendChild(newItem);
+            }
+            xmlDoc.AppendChild(methodPropetriesNode);
+            XmlNodeList xmlList = xmlDoc.ChildNodes;
+            return xmlList;
+        }
+
+
 
     }
 }
