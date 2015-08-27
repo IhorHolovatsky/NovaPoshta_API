@@ -515,7 +515,10 @@ namespace PostWatcher
             set { _printedDescription = value; }
         }
 
-
+        /// <summary>
+        /// Initialize all Properties of this instance
+        /// </summary>
+        /// <param name="xmlDoc">xml Node "Item" of xmlRespose document</param>
         public void LoadXml(XmlNode xmlDoc)
         {
             foreach (XmlNode info in xmlDoc.ChildNodes)

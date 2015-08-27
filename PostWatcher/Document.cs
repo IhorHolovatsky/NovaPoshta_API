@@ -22,6 +22,9 @@ namespace PostWatcher
         private string _error;
         private List<DataItem> _items = new List<DataItem>();
 
+        /// <summary>
+        /// Date of current document. Return DateTime.Min if no items in document
+        /// </summary>
         [DataMember]
         public DateTime Date
         {
@@ -35,6 +38,9 @@ namespace PostWatcher
             private set { }
         }
 
+        /// <summary>
+        /// List of items in this document
+        /// </summary>
         [DataMember]
         public List<DataItem> Items
         {
@@ -47,18 +53,29 @@ namespace PostWatcher
             private set { _items = value; }
         }
 
+        /// <summary>
+        /// if Query to Web API is success
+        /// </summary>
         [DataMember]
         public bool Success
         {
             get { return _success; }
             private set { _success = value; }
         }
+
+        /// <summary>
+        /// if Document has items
+        /// </summary>
         [DataMember]
         public bool HasData
         {
             get { return _hasData; }
             private set { _hasData = value; }
         }
+
+        /// <summary>
+        /// Error message 
+        /// </summary>
         [DataMember]
         public string Error
         {
@@ -66,6 +83,11 @@ namespace PostWatcher
             private set { _error = value; }
         }
 
+        /// <summary>
+        /// Async method, return Response xmlDocument
+        /// </summary>
+        /// <param name="xmlRequest">xml request document</param>
+        /// <returns></returns>
         public async Task<XmlDocument> SendRequestXmlDocumentAsync(XmlDocument xmlRequest)
         {
 
@@ -99,6 +121,12 @@ namespace PostWatcher
 
             return xmlResponse;
         }
+
+        /// <summary>
+        /// return Response xmlDocument
+        /// </summary>
+        /// <param name="xmlRequest">xml request document</param>
+        /// <returns></returns>
         public XmlDocument SendRequestXmlDocument(XmlDocument xmlRequest)
         {
             //HttpWebRequest to a Web Service
@@ -137,6 +165,14 @@ namespace PostWatcher
             return xmlResponse;
         }
 
+        /// <summary>
+        /// Return xmlDocument with query to Web API
+        /// </summary>
+        /// <param name="APIkey">API key of NovaPoshta (can get in your account in NovaPoshta)</param>
+        /// <param name="modelName">modelName</param>
+        /// <param name="methodName">Name of calling method in Web API</param>
+        /// <param name="methodPropetries">Parameters of calling method</param>
+        /// <returns></returns>
         public XmlDocument MakeRequestXmlDocument(string APIkey, string modelName, string methodName, XmlNodeList methodPropetries)
         {
             string query = @"<?xml version='1.0' encoding='UTF-8'?><root><apiKey></apiKey><modelName></modelName>
@@ -174,7 +210,10 @@ namespace PostWatcher
             return xmlDocument;
         }
 
-
+        /// <summary>
+        /// Initialize properties of this instanse
+        /// </summary>
+        /// <param name="xmlDoc">Response xmlDocument</param>
         public void LoadResponseXmlDocument(XmlDocument xmlDoc)
         {
 

@@ -1,25 +1,16 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.IsolatedStorage;
 using System.Linq;
 using System.Net;
-using System.Net.NetworkInformation;
 using System.Reflection;
-using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Threading;
 using System.Xml;
-using System.Xml.Serialization;
 using Microsoft.Win32;
 
 namespace PostWatcher
@@ -33,15 +24,13 @@ namespace PostWatcher
         //USE DATA BASEE!!!!!!!!!!!!!
 
 
-        private string _APIKey;
-        private DataItem filter = new DataItem();
-        private List<Document> responseDocuments = new List<Document>(7);
-        private DateBaseOfDocuments dbDocs;
-        private List<string> stateFilter = new List<string>(10);
+        private string _apiKey;
+        private DataItem _filter = new DataItem();
+         private DateBaseOfDocuments _dbDocs;
+        private List<string> _stateFilter = new List<string>(10);
         private readonly IsolatedStorageFile _isolated = IsolatedStorageFile.GetUserStoreForAssembly();
-        private object locker = new Object();
-        private Task findTask;
-        private CancellationTokenSource cts;
+        private object _locker = new Object();
+        private Task _findTask;
 
         public MainWindow()
         {
@@ -71,27 +60,27 @@ namespace PostWatcher
             {
                 var newWindwowApIkey = new APIkey();
                 newWindwowApIkey.ShowDialog();
-                _APIKey = (string)rk.GetValue("API key");
+                _apiKey = (string)rk.GetValue("API key");
 
                 OpenLoader("RefreshDataBase");
             }
 
-            _APIKey = (string)rk.GetValue("API key");
+            _apiKey = (string)rk.GetValue("API key");
 
-            dbDocs = await GetFiles();
+            _dbDocs = await GetFiles();
 
             await Task.Factory.StartNew(
-                () => AddItemsToDataGrid(dbDocs.Documents, filter)
+                () => AddItemsToDataGrid(_dbDocs.Documents, _filter)
                                        );
 
-            if (dbDocs.Dates.Max < DateTime.Today)
-                OpenLoader("RefreshDateBase");
+            if (_dbDocs.Dates.Max < DateTime.Today)
+                OpenLoader("RefreshDataBase");
 
         }
 
         private void OpenLoader(string methodName)
         {
-            var newLoading = new Loading(_APIKey, methodName);
+            var newLoading = new Loading(_apiKey, methodName);
             newLoading.ShowDialog();
         }
 
@@ -102,7 +91,7 @@ namespace PostWatcher
             var newWindow = new APIkey();
             newWindow.ShowDialog();
             var rk = Registry.CurrentUser.OpenSubKey("PostWatcher");
-            _APIKey = (string)rk.GetValue("API key");
+            _apiKey = (string)rk.GetValue("API key");
 
         }
 
@@ -132,8 +121,7 @@ namespace PostWatcher
             try
             {
                 using (var client = new WebClient())
-                using (var stream = await client.OpenReadTaskAsync("http://www.google.com"))
-                    return true;
+                using (await client.OpenReadTaskAsync("http://www.google.com")) return true;
             }
             catch
             {
@@ -143,16 +131,15 @@ namespace PostWatcher
 
         private async Task<DateBaseOfDocuments> GetFiles()
         {
-            string[] fileNames;
-            string fileName = String.Empty;
-            lock (locker)
+            string fileName;
+            lock (_locker)
             {
-                fileNames = _isolated.GetFileNames();
+                var fileNames = _isolated.GetFileNames();
 
                 if (fileNames.Length == 0)
                     return null;
 
-                fileName = fileNames.Single((fileN) => fileN == _APIKey);
+                fileName = fileNames.Single(fileN => fileN == _apiKey);
             }
 
             return await DeSerializeDocuments(fileName);
@@ -169,7 +156,7 @@ namespace PostWatcher
             foreach (var dataItem in document.Items)
             {
                 if (!CompareTwoItems(dataItem, filterItem)) continue;
-                if (stateFilter.Contains(dataItem.StateName)) continue;
+                if (_stateFilter.Contains(dataItem.StateName)) continue;
 
                 var thisValue = dataItem;
                 AsyncChangeControlState(DG_doc, () => DG_doc.Items.Add(thisValue));
@@ -188,7 +175,7 @@ namespace PostWatcher
         {
             if (!document.Success || !document.HasData)
                 return;
-
+           
             AddItemsToDataGrid(document.Items, filterItem);
         }
 
@@ -203,7 +190,7 @@ namespace PostWatcher
         private void AddItemsToDataGrid(DataItem item, DataItem filterItem)
         {
             if (!CompareTwoItems(item, filterItem)) return;
-            if (stateFilter.Contains(item.StateName)) return;
+            if (_stateFilter.Contains(item.StateName)) return;
 
             var thisValue = item;
             AsyncChangeControlState(DG_doc, () => DG_doc.Items.Add(thisValue));
@@ -256,7 +243,7 @@ namespace PostWatcher
             var items = DG_doc.Items.Cast<DataItem>().ToList();
             DG_doc.Items.Clear();
             btn_OKfilter.IsEnabled = false;
-            await Task.Factory.StartNew(() => AddItemsToDataGrid(items, filter));
+            await Task.Factory.StartNew(() => AddItemsToDataGrid(items, _filter));
             btn_OKfilter.IsEnabled = true;
         }
 
@@ -269,11 +256,11 @@ namespace PostWatcher
 
             await Task.Factory.StartNew(() =>
             {
-                var query = from x in dbDocs.Documents
+                var query = from x in _dbDocs.Documents
                     where (x.Date >= left) && (x.Date <= right)
                     select x;
 
-                AddItemsToDataGrid(query.ToList(), filter);
+                AddItemsToDataGrid(query.ToList(), _filter);
             });
         }
 
@@ -283,84 +270,84 @@ namespace PostWatcher
 
         private void Tb_IntDoc_OnTextChanged(object sender, TextChangedEventArgs e)
         {
-            filter.IntDocNumber = tb_IntDoc.Text != "" ? tb_IntDoc.Text : null;
+            _filter.IntDocNumber = tb_IntDoc.Text != "" ? tb_IntDoc.Text : null;
         }
 
         private void Tb_RecipientCityDescription_OnTextChanged(object sender, TextChangedEventArgs e)
         {
-            filter.CityRecipientDescription = tb_RecipientCityDescription.Text != "" ?
+            _filter.CityRecipientDescription = tb_RecipientCityDescription.Text != "" ?
                 tb_RecipientCityDescription.Text : null;
         }
 
         private void Tb_RecipientPhone_OnTextChanged(object sender, TextChangedEventArgs e)
         {
-            filter.RecipientContactPhone = tb_RecipientPhone.Text != "" ? tb_RecipientPhone.Text : null;
+            _filter.RecipientContactPhone = tb_RecipientPhone.Text != "" ? tb_RecipientPhone.Text : null;
         }
         #endregion
 
         #region COMBO_BOX OF STATE FILTER
         private void Chb_delievered_OnChecked(object sender, RoutedEventArgs e)
         {
-            stateFilter.Remove("Одержаний");
+            _stateFilter.Remove("Одержаний");
         }
 
         private void Chb_Proccessing_OnChecked(object sender, RoutedEventArgs e)
         {
 
-            stateFilter.Remove("Замовлення в обробці");
+            _stateFilter.Remove("Замовлення в обробці");
         }
 
         private void Chb_WaitingForSending_OnChecked(object sender, RoutedEventArgs e)
         {
 
-            stateFilter.Remove("Готується до відправлення");
+            _stateFilter.Remove("Готується до відправлення");
         }
 
         private void Chb_ArrivedToRecipient_OnChecked(object sender, RoutedEventArgs e)
         {
 
-            stateFilter.Remove("Прибув у відділення");
+            _stateFilter.Remove("Прибув у відділення");
         }
 
         private void Chb_Sended_OnChecked(object sender, RoutedEventArgs e)
         {
 
-            stateFilter.Remove("Відправленно");
+            _stateFilter.Remove("Відправленно");
         }
 
         private void Chb_AddressChanged_OnChecked(object sender, RoutedEventArgs e)
         {
-            stateFilter.Remove("Змінено адресу");
+            _stateFilter.Remove("Змінено адресу");
         }
 
         private void Chb_Sended_OnUnchecked(object sender, RoutedEventArgs e)
         {
-            stateFilter.Add("Відправленно");
+            _stateFilter.Add("Відправленно");
         }
 
         private void Chb_AddressChanged_OnUnchecked(object sender, RoutedEventArgs e)
         {
-            stateFilter.Add("Змінено адресу");
+            _stateFilter.Add("Змінено адресу");
         }
 
         private void Chb_ArrivedToRecipient_OnUnchecked(object sender, RoutedEventArgs e)
         {
-            stateFilter.Add("Прибув у відділення");
+            _stateFilter.Add("Прибув у відділення");
         }
 
         private void Chb_WaitingForSending_OnUnchecked(object sender, RoutedEventArgs e)
         {
-            stateFilter.Add("Готується до відправлення");
+            _stateFilter.Add("Готується до відправлення");
         }
 
         private void Chb_Proccessing_OnUnchecked(object sender, RoutedEventArgs e)
         {
-            stateFilter.Add("Замовлення в обробці");
+            _stateFilter.Add("Замовлення в обробці");
         }
 
         private void Chb_delievered_OnUnchecked(object sender, RoutedEventArgs e)
         {
-            stateFilter.Add("Одержаний");
+            _stateFilter.Add("Одержаний");
         }
         #endregion
 
@@ -378,10 +365,10 @@ namespace PostWatcher
             {
                 var methodPrepetries = CreateXmlListPropertiesForDocumentsTracking(selectedItems);
 
-                var task = MakeTask("InternetDocument", "documentsTracking", methodPrepetries);
+//                var task = MakeTask("InternetDocument", "documentsTracking", methodPrepetries);
 
                 var document = new Document();
-                document.LoadResponseXmlDocument(task.Result);
+  //              document.LoadResponseXmlDocument(task.Result);
 
                 return document.Items;
             });

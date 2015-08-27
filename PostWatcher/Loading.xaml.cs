@@ -15,7 +15,7 @@ using System.Xml;
 namespace PostWatcher
 {
     /// <summary>
-    /// Interaction logic for Loading.xaml
+    /// Window that will show status of loading data
     /// </summary>
     public partial class Loading
     {
@@ -47,7 +47,7 @@ namespace PostWatcher
             }
             l_state.Content = "Запит обробляється...";
 
-
+            //Methods in web api
             switch (_loadMethod)
             {
                 case "RefreshDataBase":
@@ -199,6 +199,8 @@ namespace PostWatcher
             var binnaryFormatter = new BinaryFormatter();
 
             var responseList = binnaryFormatter.Deserialize(stream) as DateBaseOfDocuments;
+            stream.Close();
+            
             return responseList;
         }
 
