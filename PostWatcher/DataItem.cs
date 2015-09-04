@@ -96,7 +96,7 @@ namespace PostWatcher
         public DateTime DateTime
         {
             get { return _dateTime; }
-            private set { _dateTime = value; }
+            set { _dateTime = value; }
         }
         [DataMember]
         public DateTime PreferredDeliveryDate
@@ -108,7 +108,7 @@ namespace PostWatcher
         public double Weight
         {
             get { return _weight; }
-            private set { _weight = value; }
+            set { _weight = value; }
         }
         [DataMember]
         public byte SeatsAmount
@@ -126,7 +126,7 @@ namespace PostWatcher
         public double Cost
         {
             get { return _cost; }
-            private set { _cost = value; }
+            set { _cost = value; }
         }
         [DataMember]
         public string CitySender
@@ -150,13 +150,13 @@ namespace PostWatcher
         public string RecipientAddress
         {
             get { return _recipientAddress; }
-            private set { _recipientAddress = value; }
+            set { _recipientAddress = value; }
         }
         [DataMember]
         public double CostOnSite
         {
             get { return _costOnSite; }
-            private set { _costOnSite = value; }
+            set { _costOnSite = value; }
         }
         [DataMember]
         public string PayerType
@@ -422,7 +422,7 @@ namespace PostWatcher
         public string RecipientDescription
         {
             get { return _recipientDescription; }
-            private set { _recipientDescription = value; }
+            set { _recipientDescription = value; }
         }
         [DataMember]
         public string RecipientContactPhone
@@ -446,7 +446,7 @@ namespace PostWatcher
         public string RecipientAddressDescription
         {
             get { return _recipientAddressDescription; }
-            private set { _recipientAddressDescription = value; }
+            set { _recipientAddressDescription = value; }
         }
         [DataMember]
         public bool Printed

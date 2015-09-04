@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
+using System.Data.SqlClient;
 using System.IO;
 using System.IO.IsolatedStorage;
 using System.Linq;
@@ -22,21 +24,24 @@ namespace PostWatcher
         private CancellationTokenSource _cts;
         private Task _findTask;
         private readonly string _apiKey;
-        private readonly string _loadMethod;
-        private readonly IsolatedStorageFile _isolated = IsolatedStorageFile.GetUserStoreForAssembly();
-        private DateBaseOfDocuments _dbDocs;
+        private readonly string _modelName;
+        private readonly string _methodName;
+        private static string _connectionString;
+        private readonly object _locker = new object();
 
-
-        public Loading(string apiKey, string loadMethod)
+        public Loading(string apiKey, string modelName, string methodName)
         {
             InitializeComponent();
             _apiKey = apiKey;
-            _loadMethod = loadMethod;
+            _modelName = modelName;
+            _methodName = methodName;
             pb_state.Maximum = 100.0;
         }
 
         private async void Loading_OnLoaded(object sender, RoutedEventArgs e)
         {
+            _connectionString = ConfigurationManager.ConnectionStrings["connectToTTN"].ConnectionString;
+
             l_state.Content = "Перевірка з'єднання з інтернетом...";
 
             bool isInternetConnection = await CheckConnectionAsync();
@@ -48,47 +53,48 @@ namespace PostWatcher
             l_state.Content = "Запит обробляється...";
 
             //Methods in web api
-            switch (_loadMethod)
+            switch (_methodName)
             {
-                case "RefreshDataBase":
-                    await RefreshDataBase();
+                case "getDocumentList":
+                    await GetDocumentList();
                     break;
-            } 
+            }
         }
 
-        private async Task RefreshDataBase()
+        #region getDocumentList
+
+        private async Task GetDocumentList()
         {
             DateTime left;
             DateTime right;
 
-            var fileNames = _isolated.GetFileNames();
 
-            if (fileNames.Length == 0)
-                left = DateTime.Parse("01.01.2015");
-            else
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            using (SqlCommand cmd = new SqlCommand("SELECT max(DateTime) FROM [TTN]", connection))
             {
-                var fileName = fileNames.Single(fName => fName == _apiKey);
-                if (fileName.Length != 0)
+                connection.Open();
+
+                using (SqlDataReader reader = cmd.ExecuteReader())
                 {
-                    //Deserialization;
-                    _dbDocs = await Task.Factory.StartNew(() => DeSerializeDocuments(fileName));
-                    left = _dbDocs.Dates.Max;
-                }
-                else
-                {
-                    left = DateTime.Parse("01.01.2015");
+                    try
+                    {
+                        reader.Read();
+                        left = reader.GetDateTime(0);
+                    }
+                    catch (Exception)
+                    {
+                        left = DateTime.Parse("01.01.2015");
+                    }
                 }
             }
-
+            
             right = DateTime.Today;
 
-            if (_dbDocs == null)
-                _dbDocs = new DateBaseOfDocuments();
-
             _cts = new CancellationTokenSource();
+
             try
             {
-                _findTask = GetNovaPoshtaDocuments(left, right);
+                _findTask = _GetDocumentList(left, right);
                 await _findTask;
             }
             catch (OperationCanceledException)
@@ -101,12 +107,10 @@ namespace PostWatcher
                 _cts.Dispose();
             }
 
-            await Task.Factory.StartNew(() => SerializeDocuments(_apiKey, _dbDocs));
-
             this.Close();
         }
-       
-        private async Task GetNovaPoshtaDocuments(DateTime left, DateTime right)
+
+        private async Task _GetDocumentList(DateTime left, DateTime right)
         {
 
             var makeTasks = await Task<IEnumerable<Task<XmlDocument>>>.Factory.StartNew(
@@ -116,7 +120,7 @@ namespace PostWatcher
                                                                   select CreateXmlListPropertiesForGetDocuments(left, x);
 
                     IEnumerable<Task<XmlDocument>> tasks = from x in xmlQueryProperties
-                                                           select MakeTask("InternetDocument", "getDocumentList", x);
+                                                           select MakeTask(_modelName, _methodName, x);
 
                     return tasks;
                 }
@@ -141,6 +145,53 @@ namespace PostWatcher
                 });
         }
 
+        private XmlNodeList CreateXmlListPropertiesForGetDocuments(DateTime left, int x)
+        {
+            var current = left.AddDays(x);
+            var xmlDoc = new XmlDocument();
+            var methodPropetriesNode = xmlDoc.CreateNode(XmlNodeType.Element, "DateTime", null);
+            methodPropetriesNode.InnerText = String.Format("{0}.{1}.{2}", current.Day, current.Month, current.Year);
+            xmlDoc.AppendChild(methodPropetriesNode);
+            XmlNodeList xmlList = xmlDoc.ChildNodes;
+            return xmlList;
+        }
+
+        private void AddToDateBase(SqlConnection connection, DataItem item)
+        {
+            using (
+                SqlCommand cmd =
+                    new SqlCommand(
+                        "INSERT INTO [TTN] (TTN, DateTime, CityRecipientDescription, RecipientDescription, " +
+                        "RecipientAddressDescription, RecipientContactPhone, Weight, Cost, CostOnSite, StateName," +
+                        " PrintedDescription, APIKey) VALUES (@TTN, @DateTime, @CityRecipientDescription, @RecipientDescription, " +
+                        "@RecipientAddressDescription, @RecipientContactPhone, @Weight, @Cost, @CostOnSite, @StateName," +
+                        "@PrintedDescription, @APIKey)", connection))
+            {
+                cmd.Parameters.AddWithValue("@TTN", item.IntDocNumber);
+                cmd.Parameters.AddWithValue("@DateTime", item.DateTime);
+                cmd.Parameters.AddWithValue("@CityRecipientDescription", item.CityRecipientDescription);
+                cmd.Parameters.AddWithValue("@RecipientDescription", item.RecipientDescription);
+                cmd.Parameters.AddWithValue("@RecipientAddressDescription", item.RecipientAddressDescription);
+                cmd.Parameters.AddWithValue("@RecipientContactPhone", item.RecipientContactPhone);
+                cmd.Parameters.AddWithValue("@Weight", item.Weight);
+                cmd.Parameters.AddWithValue("@Cost", item.Cost);
+                cmd.Parameters.AddWithValue("@CostOnSite", item.CostOnSite);
+                cmd.Parameters.AddWithValue("@StateName", item.StateName);
+                cmd.Parameters.AddWithValue("@PrintedDescription", item.PrintedDescription);
+                cmd.Parameters.AddWithValue("@APIKey", _apiKey);
+                try
+                {
+                    cmd.ExecuteNonQuery();
+                }
+                catch (SqlException e)
+                {
+                   return;
+                }
+            }
+        }
+
+        #endregion
+
         private async Task<XmlDocument> MakeTask(string modelName, string methodName, XmlNodeList xmlList)
         {
             var newDocument = new Document();
@@ -155,20 +206,33 @@ namespace PostWatcher
             catch (WebException e)
             {
                 MessageBox.Show(e.Message);
-                Thread.CurrentThread.Abort();
+                Close();
             }
 
             newDocument.LoadResponseXmlDocument(xmlResponse);
-            _dbDocs.Add(newDocument);
-
             if (!newDocument.Success)
             {
                 MessageBox.Show("Invalid API key");
-                Thread.CurrentThread.Abort();
+                this.Close();
             }
+
+
+            lock (_locker)
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    connection.Open();
+                    foreach (var item in newDocument.Items)
+                    {
+                        AddToDateBase(connection, item);
+                    }
+                }
+            }
+
 
             return xmlResponse;
         }
+
 
         private void AsyncChangeControlState(Control element, Action action)
         {
@@ -179,38 +243,13 @@ namespace PostWatcher
                     action);
         }
 
-        private void  SerializeDocuments(string fileName, DateBaseOfDocuments dbDocs)
-        {
-            var fileStream = _isolated.OpenFile(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
-            //var dataContractSerializer = new DataContractSerializer(typeof(List<Document>));
-            //var xmlStream = XmlWriter.Create(a);
-            //dataContractSerializer.WriteObject(xmlStream, responseDocuments);
-            //xmlStream.Close();
-
-            var binnaryFormatter = new BinaryFormatter();
-            binnaryFormatter.Serialize(fileStream, dbDocs);
-
-            fileStream.Close();
-        }
-
-        private  DateBaseOfDocuments DeSerializeDocuments(string fileName)
-        {
-            var stream = _isolated.OpenFile(fileName, FileMode.Open, FileAccess.Read, FileShare.Write);
-            var binnaryFormatter = new BinaryFormatter();
-
-            var responseList = binnaryFormatter.Deserialize(stream) as DateBaseOfDocuments;
-            stream.Close();
-            
-            return responseList;
-        }
-
         protected async Task<bool> CheckConnectionAsync()
         {
             try
             {
 
                 using (var client = new WebClient())
-                using (await client.OpenReadTaskAsync("http://www.google.com")) 
+                using (await client.OpenReadTaskAsync("http://www.google.com"))
                     return true;
             }
             catch
@@ -219,16 +258,6 @@ namespace PostWatcher
             }
         }
 
-        private XmlNodeList CreateXmlListPropertiesForGetDocuments(DateTime left, int x)
-        {
-            var current = left.AddDays(x);
-            var xmlDoc = new XmlDocument();
-            var methodPropetriesNode = xmlDoc.CreateNode(XmlNodeType.Element, "DateTime", null);
-            methodPropetriesNode.InnerText = String.Format("{0}.{1}.{2}", current.Day, current.Month, current.Year);
-            xmlDoc.AppendChild(methodPropetriesNode);
-            XmlNodeList xmlList = xmlDoc.ChildNodes;
-            return xmlList;
-        }
 
 
         private void Btn_cancel_OnClick(object sender, RoutedEventArgs e)

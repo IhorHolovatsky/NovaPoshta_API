@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
+using System.Data.SqlClient;
 using System.IO;
 using System.IO.IsolatedStorage;
 using System.Linq;
@@ -21,15 +23,11 @@ namespace PostWatcher
     public partial class MainWindow
     {
 
-        //USE DATA BASEE!!!!!!!!!!!!!
-
-
         private string _apiKey;
         private DataItem _filter = new DataItem();
-         private DateBaseOfDocuments _dbDocs;
+        private DateBaseOfDocuments _dbDocs;
+        private string _connectionString;
         private List<string> _stateFilter = new List<string>(10);
-        private readonly IsolatedStorageFile _isolated = IsolatedStorageFile.GetUserStoreForAssembly();
-        private object _locker = new Object();
         private Task _findTask;
 
         public MainWindow()
@@ -41,8 +39,9 @@ namespace PostWatcher
             DatePickerRight.DisplayDateEnd = DateTime.Today;
             DatePickerRight.SelectedDate = DateTime.Today;
         }
-        private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
+        private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
         {
+            _connectionString = ConfigurationManager.ConnectionStrings["connectToTTN"].ConnectionString;
             var rk = Registry.CurrentUser.OpenSubKey("PostWatcher");
             bool isLogined = true;
 
@@ -55,32 +54,23 @@ namespace PostWatcher
                 if (rk.GetValue("API key") == null)
                     isLogined = false;
 
-
             if (!isLogined)
             {
                 var newWindwowApIkey = new APIkey();
                 newWindwowApIkey.ShowDialog();
                 _apiKey = (string)rk.GetValue("API key");
 
-                OpenLoader("RefreshDataBase");
+                OpenLoader("InternetDocument", "getDocumentList");
             }
 
             _apiKey = (string)rk.GetValue("API key");
 
-            _dbDocs = await GetFiles();
-
-            await Task.Factory.StartNew(
-                () => AddItemsToDataGrid(_dbDocs.Documents, _filter)
-                                       );
-
-            if (_dbDocs.Dates.Max < DateTime.Today)
-                OpenLoader("RefreshDataBase");
-
+            OpenLoader("InternetDocument", "getDocumentList");
         }
 
-        private void OpenLoader(string methodName)
+        private void OpenLoader(string modelName, string methodName)
         {
-            var newLoading = new Loading(_apiKey, methodName);
+            var newLoading = new Loading(_apiKey, modelName, methodName);
             newLoading.ShowDialog();
         }
 
@@ -129,40 +119,6 @@ namespace PostWatcher
             }
         }
 
-        private async Task<DateBaseOfDocuments> GetFiles()
-        {
-            string fileName;
-            lock (_locker)
-            {
-                var fileNames = _isolated.GetFileNames();
-
-                if (fileNames.Length == 0)
-                    return null;
-
-                fileName = fileNames.Single(fileN => fileN == _apiKey);
-            }
-
-            return await DeSerializeDocuments(fileName);
-        }
-
-        private void AddItemsToDataGrid(XmlDocument xmlDocument, DataItem filterItem)
-        {
-            var document = new Document();
-            document.LoadResponseXmlDocument(xmlDocument);
-
-            if (!document.Success || !document.HasData)
-                return;
-
-            foreach (var dataItem in document.Items)
-            {
-                if (!CompareTwoItems(dataItem, filterItem)) continue;
-                if (_stateFilter.Contains(dataItem.StateName)) continue;
-
-                var thisValue = dataItem;
-                AsyncChangeControlState(DG_doc, () => DG_doc.Items.Add(thisValue));
-            }
-        }
-    
         private void AddItemsToDataGrid(List<Document> docs, DataItem filterItem)
         {
             foreach (var doc in docs)
@@ -175,7 +131,7 @@ namespace PostWatcher
         {
             if (!document.Success || !document.HasData)
                 return;
-           
+
             AddItemsToDataGrid(document.Items, filterItem);
         }
 
@@ -196,7 +152,7 @@ namespace PostWatcher
             AsyncChangeControlState(DG_doc, () => DG_doc.Items.Add(thisValue));
         }
 
-        private static bool CompareTwoItems (DataItem self, DataItem to)
+        private static bool CompareTwoItems(DataItem self, DataItem to)
         {
             if (self == null) return false;
             if (to == null) return true;
@@ -233,11 +189,7 @@ namespace PostWatcher
 
         #region BUTTONS
 
-        private void Btn_cancel_OnClick(object sender, RoutedEventArgs e)
-        {
-           
-        }
-
+        //TODO: must take items from DB
         private async void Btn_OKfilter_OnClick(object sender, RoutedEventArgs e)
         {
             var items = DG_doc.Items.Cast<DataItem>().ToList();
@@ -247,6 +199,7 @@ namespace PostWatcher
             btn_OKfilter.IsEnabled = true;
         }
 
+
         private async void Btn_selectDataOK_OnClick(object sender, RoutedEventArgs e)
         {
             DG_doc.Items.Clear();
@@ -254,14 +207,38 @@ namespace PostWatcher
             DateTime left = DatePickerLeft.SelectedDate ?? DateTime.Today;
             DateTime right = DatePickerRight.SelectedDate ?? DateTime.Today;
 
-            await Task.Factory.StartNew(() =>
-            {
-                var query = from x in _dbDocs.Documents
-                    where (x.Date >= left) && (x.Date <= right)
-                    select x;
 
-                AddItemsToDataGrid(query.ToList(), _filter);
-            });
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            using (
+                SqlCommand cmd = new SqlCommand("SELECT * FROM [TTN] WHERE DateTime BETWEEN @left AND @right ", connection))
+            {
+                await connection.OpenAsync();
+                cmd.Parameters.AddWithValue("@left", left);
+                cmd.Parameters.AddWithValue("@right", right);
+
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    if (reader.HasRows)
+                        while (reader.Read())
+                        {
+                            var DataItem = new DataItem();
+                            DataItem.IntDocNumber = reader.GetString(0).Trim();
+                            DataItem.DateTime = reader.GetDateTime(1);
+                            DataItem.CityRecipientDescription = reader.GetString(2).Trim();
+                            DataItem.RecipientDescription = reader.GetString(3).Trim();
+                            DataItem.RecipientAddressDescription = reader.GetString(4).Trim();
+                            DataItem.RecipientContactPhone = reader.GetString(5).Trim();
+                            DataItem.Weight = reader.GetDouble(6);
+                            DataItem.Cost = reader.GetDouble(7);
+                            DataItem.CostOnSite = reader.GetDouble(8);
+                            DataItem.StateName = reader.GetString(9).Trim();
+                            DataItem.PrintedDescription = reader.GetString(10).Trim();
+
+                            AddItemsToDataGrid(DataItem, _filter);
+                        }
+                }
+            }
+
         }
 
         #endregion
@@ -365,10 +342,10 @@ namespace PostWatcher
             {
                 var methodPrepetries = CreateXmlListPropertiesForDocumentsTracking(selectedItems);
 
-//                var task = MakeTask("InternetDocument", "documentsTracking", methodPrepetries);
+                //                var task = MakeTask("InternetDocument", "documentsTracking", methodPrepetries);
 
                 var document = new Document();
-  //              document.LoadResponseXmlDocument(task.Result);
+                //              document.LoadResponseXmlDocument(task.Result);
 
                 return document.Items;
             });
@@ -384,26 +361,6 @@ namespace PostWatcher
 
 
         #endregion
-
-        private async Task<DateBaseOfDocuments> DeSerializeDocuments(string fileName)
-        {
-            var stream = _isolated.OpenFile(fileName, FileMode.Open, FileAccess.Read, FileShare.Write);
-            var binnaryFormatter = new BinaryFormatter();
-
-            var responseList = binnaryFormatter.Deserialize(stream) as DateBaseOfDocuments;
-            return responseList;
-        }
-
-        private XmlNodeList CreateXmlListPropertiesForGetDocuments(DateTime left, int x)
-        {
-            var current = left.AddDays(x);
-            var xmlDoc = new XmlDocument();
-            var methodPropetriesNode = xmlDoc.CreateNode(XmlNodeType.Element, "DateTime", null);
-            methodPropetriesNode.InnerText = String.Format("{0}.{1}.{2}", current.Day, current.Month, current.Year);
-            xmlDoc.AppendChild(methodPropetriesNode);
-            XmlNodeList xmlList = xmlDoc.ChildNodes;
-            return xmlList;
-        }
 
         private XmlNodeList CreateXmlListPropertiesForDocumentsTracking(List<DataItem> selectItems)
         {
