@@ -86,14 +86,15 @@
     <Compile Include="APIkey.xaml.cs">
       <DependentUpon>APIkey.xaml</DependentUpon>
     </Compile>
+    <Compile Include="APIclasses\APImethods.cs" />
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Library classes\IComponent.cs" />
-    <Compile Include="Library classes\City.cs" />
-    <Compile Include="DataItem.cs" />
-    <Compile Include="Document.cs" />
+    <Compile Include="APIclasses\IComponent.cs" />
+    <Compile Include="APIclasses\City.cs" />
+    <Compile Include="APIclasses\DataItem.cs" />
+    <Compile Include="APIclasses\Document.cs" />
     <Compile Include="Loading.xaml.cs">
       <DependentUpon>Loading.xaml</DependentUpon>
     </Compile>

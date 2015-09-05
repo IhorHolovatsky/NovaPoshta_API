@@ -62,7 +62,7 @@ namespace PostWatcher
 
             //Bad realization
             //Refresh all Libraries of NovaPoshta.
-            OpenLoader("", "RefreshLibraries", null);
+            OpenLoader("InternetDocument", "getDocumentList", null);
         }
 
         private void OpenLoader(string modelName, string methodName, XmlNodeList methodProperties)

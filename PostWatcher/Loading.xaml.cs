@@ -22,6 +22,7 @@ namespace PostWatcher
     public partial class Loading
     {
         private CancellationTokenSource _cts;
+        private APImethods _apiMethods;
         private Task _runnedTask;
         private readonly string _apiKey;
         private readonly string _modelName;
@@ -37,6 +38,7 @@ namespace PostWatcher
             _modelName = modelName;
             _methodName = methodName;
             _methodProperties = methodProperties;
+            _apiMethods = new APImethods(apiKey);
             pb_state.Maximum = 100.0;
         }
 
@@ -63,11 +65,16 @@ namespace PostWatcher
                 case "documentsTracking":
                     await DocumentsTracking();
                     break;
+                case "getCities":
+                    await GetCities();
+                    break;
                 case "RefreshLibraries":
-                    await RefreshLibraries();
+                    await GetCities();
+
                     break;
 
             }
+            this.Close();
         }
 
         #region getDocumentList
@@ -116,65 +123,59 @@ namespace PostWatcher
                 _cts.Dispose();
             }
 
-            this.Close();
         }
 
         private async Task _GetDocumentList(DateTime left, DateTime right)
         {
 
-            var makeTasks = await Task<IEnumerable<Task<XmlDocument>>>.Factory.StartNew(
+            var makeTasks = await Task<IEnumerable<Task<Document<DataItem>>>>.Factory.StartNew(
                 () =>
                 {
-                    IEnumerable<XmlNodeList> xmlQueryProperties = from x in Enumerable.Range(0, (right - left).Days + 1)
-                                                                  select CreateXmlListPropertiesForGetDocuments(left, x);
+                    var xmlQueryProperties = from x in Enumerable.Range(0, (right - left).Days + 1)
+                                             select CreateXmlListPropertiesForGetDocuments(left, x);
 
-                    IEnumerable<Task<XmlDocument>> tasks = from x in xmlQueryProperties
-                                                           select MakeTask(_modelName, _methodName, x);
+                    var tasks = from x in xmlQueryProperties
+                                select _apiMethods.GetDocumentListAsync(x);
 
                     return tasks;
                 }
                 );
 
-            await Task.Factory.StartNew(
-                () =>
+            var b = makeTasks.ToList();
+
+            while (b.Count > 0)
+            {
+                var task = await Task.WhenAny(b);
+
+                if (_cts.IsCancellationRequested)
+                    _cts.Token.ThrowIfCancellationRequested();
+
+                b.Remove(task);
+
+                pb_state.Value += 100.0 / ((right - left).Days + 1);
+
+                var doc = task.Result;
+
+                if (!doc.HasData) continue;
+                if (!doc.Success)
                 {
-                    List<Task<XmlDocument>> b = makeTasks.ToList();
+                    MessageBox.Show("Invalid API key");
+                    Close();
+                }
 
-                    while (b.Count > 0)
+                lock (_locker)
+                {
+                    using (SqlConnection connection = new SqlConnection(_connectionString))
                     {
-                        var task = Task.WhenAny(b);
-                        var xmlResponse = task.Result.Result;
-
-                        if (_cts.IsCancellationRequested)
-                            _cts.Token.ThrowIfCancellationRequested();
-
-                        b.Remove(task.Result);
-
-                        AsyncChangeControlState(pb_state, () => pb_state.Value += 100.0 / ((right - left).Days + 1));
-
-                        var newDocument = new Document<DataItem>();
-                        newDocument.LoadFromXml(xmlResponse);
-
-                        if (!newDocument.HasData) continue;
-                        if (!newDocument.Success)
+                        connection.Open();
+                        foreach (var item in doc.Items)
                         {
-                            MessageBox.Show("Invalid API key");
-                            Close();
-                        }
-
-                        lock (_locker)
-                        {
-                            using (SqlConnection connection = new SqlConnection(_connectionString))
-                            {
-                                connection.Open();
-                                foreach (var item in newDocument.Items)
-                                {
-                                    AddToDateBase(connection, item);
-                                }
-                            }
+                            AddToDateBase(connection, item);
                         }
                     }
-                });
+                }
+            }
+
         }
 
         private XmlNodeList CreateXmlListPropertiesForGetDocuments(DateTime left, int x)
@@ -231,8 +232,7 @@ namespace PostWatcher
 
             try
             {
-                _runnedTask = _DocumentsTracking();
-                await _runnedTask;
+                await _DocumentsTracking();
             }
             catch (OperationCanceledException)
             {
@@ -244,21 +244,17 @@ namespace PostWatcher
                 _cts.Dispose();
             }
 
-            this.Close();
         }
 
         private async Task _DocumentsTracking()
         {
-            var task = await MakeTask(_modelName, _methodName, _methodProperties);
-
-            var document = new Document<DataItem>();
-            document.LoadFromXml(task);
+            var document = await _apiMethods.GetDocumentListAsync(_methodProperties);
 
 #warning document tracking dont return intDocnumber
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
+                await connection.OpenAsync();
                 var i = document.Items.Count;
                 foreach (var item in document.Items)
                 {
@@ -272,43 +268,34 @@ namespace PostWatcher
 
                         try
                         {
-                            cmd.ExecuteNonQuery();
+                            await cmd.ExecuteNonQueryAsync();
                         }
                         catch (SqlException e)
                         {
                             return;
                         }
 
-                        AsyncChangeControlState(pb_state, () => pb_state.Value += 100.0 / i);
-
+                        pb_state.Value += 100.0 / i;
                     }
                 }
             }
-
-
-
         }
 
 
         #endregion
 
-        #region RefreshLibraries
+        #region getCities
 
-        private async Task RefreshLibraries()
+        private async Task GetCities()
         {
+            var doc = await _apiMethods.GetCitiesAsync(_methodProperties);
+
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
-
-                var newDoc = new Document<City>();
-                var xmlResponse = await MakeTask("Address", "getCities", null);
-                newDoc.LoadFromXml(xmlResponse);
-               
-                await AddCitiesToDataBase(newDoc, connection);
+                await AddCitiesToDataBase(doc, connection);
             }
-            this.Close();
         }
-
         private async Task AddCitiesToDataBase(Document<City> doc, SqlConnection connection)
         {
             foreach (var item in doc.Items)
@@ -335,7 +322,7 @@ namespace PostWatcher
                     cmd.Parameters.AddWithValue("@CityID", item.CityId);
                     try
                     {
-                       await cmd.ExecuteNonQueryAsync();
+                        await cmd.ExecuteNonQueryAsync();
                     }
                     catch (SqlException e)
                     {
@@ -347,16 +334,19 @@ namespace PostWatcher
 
         #endregion
 
+        #region getStreet
+        #endregion
+
         private async Task<XmlDocument> MakeTask(string modelName, string methodName, XmlNodeList xmlList)
         {
 
-            var xmlQuery = Document.MakeRequestXmlDocument(_apiKey, modelName, methodName, xmlList);
+            var xmlQuery = APImethods.MakeRequestXmlDocument(_apiKey, modelName, methodName, xmlList);
 
             XmlDocument xmlResponse = null;
             try
             {
                 Thread.Sleep(new Random().Next(50));
-                xmlResponse = await Document.SendRequestXmlDocumentAsync(xmlQuery);
+                xmlResponse = await APImethods.SendRequestXmlDocumentAsync(xmlQuery);
             }
             catch (WebException e)
             {
