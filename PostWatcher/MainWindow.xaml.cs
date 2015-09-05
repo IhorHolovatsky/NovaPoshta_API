@@ -60,7 +60,9 @@ namespace PostWatcher
 
             _apiKey = (string)rk.GetValue("API key");
 
-            OpenLoader("InternetDocument", "getDocumentList", null);
+            //Bad realization
+            //Refresh all Libraries of NovaPoshta.
+            OpenLoader("", "RefreshLibraries", null);
         }
 
         private void OpenLoader(string modelName, string methodName, XmlNodeList methodProperties)

@@ -10,56 +10,8 @@ using System.Xml;
 
 namespace PostWatcher
 {
-  internal class Document
+    internal static class Document
     {
-
-        private bool _success;
-        private bool _hasData;
-        private string _error;
-        private List<DataItem> _items = new List<DataItem>();
-
-      /// <summary>
-        /// List of items in this document
-        /// </summary>  
-        public List<DataItem> Items
-        {
-            get
-            {
-                if (!_hasData)
-                    return null;
-                
-                return _items;
-            }
-          private set { _items = value; }
-        }
-
-        /// <summary>
-        /// if Query to Web API is success
-        /// </summary>
-        public bool Success
-        {
-            get { return _success; }
-            private set { _success = value; }
-        }
-
-        /// <summary>
-        /// if Document has items
-        /// </summary>
-         public bool HasData
-        {
-            get { return _hasData; }
-            private set { _hasData = value; }
-        }
-
-        /// <summary>
-        /// Error message 
-        /// </summary>
-         public string Error
-        {
-            get { return _error; }
-            private set { _error = value; }
-        }
-
         /// <summary>
         /// Async method, return Response xmlDocument
         /// </summary>
@@ -73,7 +25,7 @@ namespace PostWatcher
             httpWebRequest.ContentType = @"application/x-www-form-urlencoded";
             ServicePointManager.DefaultConnectionLimit = 2000;
 
-          var streamOut = new StreamWriter(await httpWebRequest.GetRequestStreamAsync());
+            var streamOut = new StreamWriter(await httpWebRequest.GetRequestStreamAsync());
             await streamOut.WriteAsync(xmlRequest.InnerXml);
 
             //streamOut.Flush();
@@ -185,12 +137,63 @@ namespace PostWatcher
 
             return xmlDocument;
         }
+    }
+    internal class Document<T> where T : IComponent, new()
+    {
 
+        private bool _success;
+        private bool _hasData;
+        private string _error;
+        private List<T> _items = new List<T>();
+
+      /// <summary>
+        /// List of items in this document
+        /// </summary>  
+        public List<T> Items
+        {
+            get
+            {
+                if (!_hasData)
+                    return null;
+                
+                return _items;
+            }
+          private set { _items = value; }
+        }
+
+        /// <summary>
+        /// if Query to Web API is success
+        /// </summary>
+        public bool Success
+        {
+            get { return _success; }
+            private set { _success = value; }
+        }
+
+        /// <summary>
+        /// if Document has items
+        /// </summary>
+         public bool HasData
+        {
+            get { return _hasData; }
+            private set { _hasData = value; }
+        }
+
+        /// <summary>
+        /// Error message 
+        /// </summary>
+         public string Error
+        {
+            get { return _error; }
+            private set { _error = value; }
+        }
+
+      
         /// <summary>
         /// Initialize properties of this instanse
         /// </summary>
         /// <param name="xmlDoc">Response xmlDocument</param>
-        public void LoadResponseXmlDocument(XmlDocument xmlDoc)
+        public void LoadFromXml(XmlDocument xmlDoc)
         {
 
             var query = from XmlNode x in xmlDoc.DocumentElement.ChildNodes
@@ -233,13 +236,11 @@ namespace PostWatcher
 
             foreach (XmlNode item in dataNode.ChildNodes)
             {
-                var dateItem = new DataItem();
-                dateItem.LoadXml(item);
-                _items.Add(dateItem);
+                T container = new T();
+                container.LoadFromXml(item);
+                _items.Add(container);
             }
 
         }
-
-
     }
 }

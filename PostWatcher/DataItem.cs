@@ -7,7 +7,7 @@ namespace PostWatcher
 {
     [Serializable]
     [DataContract]
-    public class DataItem
+    public class DataItem : IComponent
     {
 
         private string _ref;
@@ -515,7 +515,7 @@ namespace PostWatcher
         /// Initialize all Properties of this instance
         /// </summary>
         /// <param name="xmlDoc">xml Node "Item" of xmlRespose document</param>
-        public void LoadXml(XmlNode xmlDoc)
+        public void LoadFromXml(XmlNode xmlDoc)
         {
             foreach (XmlNode info in xmlDoc.ChildNodes)
             {

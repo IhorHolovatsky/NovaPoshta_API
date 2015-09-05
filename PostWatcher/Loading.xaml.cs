@@ -63,6 +63,9 @@ namespace PostWatcher
                 case "documentsTracking":
                     await DocumentsTracking();
                     break;
+                case "RefreshLibraries":
+                    await RefreshLibraries();
+                    break;
 
             }
         }
@@ -84,7 +87,7 @@ namespace PostWatcher
                 {
                     try
                     {
-                       await reader.ReadAsync();
+                        await reader.ReadAsync();
                         left = reader.GetDateTime(0);
                     }
                     catch (Exception)
@@ -110,7 +113,7 @@ namespace PostWatcher
             }
             finally
             {
-              _cts.Dispose();
+                _cts.Dispose();
             }
 
             this.Close();
@@ -141,16 +144,16 @@ namespace PostWatcher
                     {
                         var task = Task.WhenAny(b);
                         var xmlResponse = task.Result.Result;
-                       
+
                         if (_cts.IsCancellationRequested)
                             _cts.Token.ThrowIfCancellationRequested();
 
                         b.Remove(task.Result);
 
                         AsyncChangeControlState(pb_state, () => pb_state.Value += 100.0 / ((right - left).Days + 1));
-                        
-                        var newDocument = new Document();
-                        newDocument.LoadResponseXmlDocument(xmlResponse);
+
+                        var newDocument = new Document<DataItem>();
+                        newDocument.LoadFromXml(xmlResponse);
 
                         if (!newDocument.HasData) continue;
                         if (!newDocument.Success)
@@ -158,7 +161,7 @@ namespace PostWatcher
                             MessageBox.Show("Invalid API key");
                             Close();
                         }
-                        
+
                         lock (_locker)
                         {
                             using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -170,10 +173,6 @@ namespace PostWatcher
                                 }
                             }
                         }
-
-
-                   
-                   
                     }
                 });
         }
@@ -252,10 +251,10 @@ namespace PostWatcher
         {
             var task = await MakeTask(_modelName, _methodName, _methodProperties);
 
-            var document = new Document();
-            document.LoadResponseXmlDocument(task);
-         
-            #warning document tracking dont return intDocnumber
+            var document = new Document<DataItem>();
+            document.LoadFromXml(task);
+
+#warning document tracking dont return intDocnumber
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
@@ -281,7 +280,7 @@ namespace PostWatcher
                         }
 
                         AsyncChangeControlState(pb_state, () => pb_state.Value += 100.0 / i);
-                      
+
                     }
                 }
             }
@@ -290,13 +289,67 @@ namespace PostWatcher
 
         }
 
-        
+
         #endregion
 
+        #region RefreshLibraries
+
+        private async Task RefreshLibraries()
+        {
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                var newDoc = new Document<City>();
+                var xmlResponse = await MakeTask("Address", "getCities", null);
+                newDoc.LoadFromXml(xmlResponse);
+               
+                await AddCitiesToDataBase(newDoc, connection);
+            }
+            this.Close();
+        }
+
+        private async Task AddCitiesToDataBase(Document<City> doc, SqlConnection connection)
+        {
+            foreach (var item in doc.Items)
+            {
+                using (
+                    SqlCommand cmd =
+                        new SqlCommand(
+                            "INSERT INTO [Cities] (Description, DescriptionRu, Ref, Monday, Tuesday, Wednesday," +
+                            " Thursday, Friday, Saturday, Sunday, Area, CityID) VALUES " +
+                            "(@Description, @DescriptionRu, @Ref, @Monday, @Tuesday, @Wednesday," +
+                            " @Thursday, @Friday, @Saturday, @Sunday, @Area, @CityID)", connection))
+                {
+                    cmd.Parameters.AddWithValue("@Description", item.Description);
+                    cmd.Parameters.AddWithValue("@DescriptionRu", item.DescriptionRu);
+                    cmd.Parameters.AddWithValue("@Ref", item.Ref);
+                    cmd.Parameters.AddWithValue("@Monday", item.Monday);
+                    cmd.Parameters.AddWithValue("@Tuesday", item.Tuesday);
+                    cmd.Parameters.AddWithValue("@Wednesday", item.Wednesday);
+                    cmd.Parameters.AddWithValue("@Thursday", item.Thursday);
+                    cmd.Parameters.AddWithValue("@Friday", item.Friday);
+                    cmd.Parameters.AddWithValue("@Saturday", item.Saturday);
+                    cmd.Parameters.AddWithValue("@Sunday", item.Sunday);
+                    cmd.Parameters.AddWithValue("@Area", item.Area);
+                    cmd.Parameters.AddWithValue("@CityID", item.CityId);
+                    try
+                    {
+                       await cmd.ExecuteNonQueryAsync();
+                    }
+                    catch (SqlException e)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        #endregion
 
         private async Task<XmlDocument> MakeTask(string modelName, string methodName, XmlNodeList xmlList)
         {
-           
+
             var xmlQuery = Document.MakeRequestXmlDocument(_apiKey, modelName, methodName, xmlList);
 
             XmlDocument xmlResponse = null;
