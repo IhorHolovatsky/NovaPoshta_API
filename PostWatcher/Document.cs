@@ -1,5 +1,4 @@
 ﻿using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,55 +7,35 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
-using System.Xml.Serialization;
 
 namespace PostWatcher
 {
-    [Serializable]
-    [DataContract]
-    internal class Document
+  internal class Document
     {
 
-        private bool _success = false;
-        private bool _hasData = false;
+        private bool _success;
+        private bool _hasData;
         private string _error;
         private List<DataItem> _items = new List<DataItem>();
 
-        /// <summary>
-        /// Date of current document. Return DateTime.Min if no items in document
-        /// </summary>
-        [DataMember]
-        public DateTime Date
-        {
-            get
-            {
-                if (_items.Count != 0)
-                    return _items.Single().DateTime;
-
-                return DateTime.MinValue;
-            }
-            private set { }
-        }
-
-        /// <summary>
+      /// <summary>
         /// List of items in this document
-        /// </summary>
-        [DataMember]
+        /// </summary>  
         public List<DataItem> Items
         {
             get
             {
-                if (_hasData)
-                    return _items;
-                else return null;
+                if (!_hasData)
+                    return null;
+                
+                return _items;
             }
-            private set { _items = value; }
+          private set { _items = value; }
         }
 
         /// <summary>
         /// if Query to Web API is success
         /// </summary>
-        [DataMember]
         public bool Success
         {
             get { return _success; }
@@ -66,8 +45,7 @@ namespace PostWatcher
         /// <summary>
         /// if Document has items
         /// </summary>
-        [DataMember]
-        public bool HasData
+         public bool HasData
         {
             get { return _hasData; }
             private set { _hasData = value; }
@@ -76,8 +54,7 @@ namespace PostWatcher
         /// <summary>
         /// Error message 
         /// </summary>
-        [DataMember]
-        public string Error
+         public string Error
         {
             get { return _error; }
             private set { _error = value; }
@@ -96,11 +73,10 @@ namespace PostWatcher
             httpWebRequest.ContentType = @"application/x-www-form-urlencoded";
             ServicePointManager.DefaultConnectionLimit = 2000;
 
-            //Out stream
-            var streamOut = new StreamWriter(await httpWebRequest.GetRequestStreamAsync());
+          var streamOut = new StreamWriter(await httpWebRequest.GetRequestStreamAsync());
             await streamOut.WriteAsync(xmlRequest.InnerXml);
 
-            // streamOut.Flush();
+            //streamOut.Flush();
             streamOut.Close();
 
             //In Stream
@@ -219,9 +195,7 @@ namespace PostWatcher
 
             var query = from XmlNode x in xmlDoc.DocumentElement.ChildNodes
                         select x;
-
-
-
+            
             foreach (var root in query)
             {
                 switch (root.Name)

@@ -86,13 +86,11 @@
     <Compile Include="APIkey.xaml.cs">
       <DependentUpon>APIkey.xaml</DependentUpon>
     </Compile>
-    <Compile Include="API_NovaPoshta.cs" />
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DataItem.cs" />
-    <Compile Include="DateBaseOfDocuments.cs" />
     <Compile Include="Document.cs" />
     <Compile Include="Loading.xaml.cs">
       <DependentUpon>Loading.xaml</DependentUpon>

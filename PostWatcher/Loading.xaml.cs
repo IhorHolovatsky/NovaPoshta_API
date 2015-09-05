@@ -78,13 +78,13 @@ namespace PostWatcher
             using (SqlConnection connection = new SqlConnection(_connectionString))
             using (SqlCommand cmd = new SqlCommand("SELECT max(DateTime) FROM [TTN]", connection))
             {
-                connection.Open();
+                await connection.OpenAsync();
 
-                using (SqlDataReader reader = cmd.ExecuteReader())
+                using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
                 {
                     try
                     {
-                        reader.Read();
+                       await reader.ReadAsync();
                         left = reader.GetDateTime(0);
                     }
                     catch (Exception)
@@ -254,11 +254,13 @@ namespace PostWatcher
 
             var document = new Document();
             document.LoadResponseXmlDocument(task);
-
+         
+            #warning document tracking dont return intDocnumber
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
+                var i = document.Items.Count;
                 foreach (var item in document.Items)
                 {
                     using (
@@ -277,6 +279,9 @@ namespace PostWatcher
                         {
                             return;
                         }
+
+                        AsyncChangeControlState(pb_state, () => pb_state.Value += 100.0 / i);
+                      
                     }
                 }
             }

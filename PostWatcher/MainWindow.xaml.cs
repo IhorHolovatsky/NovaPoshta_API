@@ -2,12 +2,9 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
-using System.IO;
-using System.IO.IsolatedStorage;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -24,12 +21,10 @@ namespace PostWatcher
     {
 
         private string _apiKey;
-        private DataItem _filter = new DataItem();
-        private DateBaseOfDocuments _dbDocs;
+        private readonly DataItem _filter = new DataItem();
         private string _connectionString;
-        private List<string> _stateFilter = new List<string>(10);
-        private Task _findTask;
-
+        private readonly List<string> _stateFilter = new List<string>(10);
+    
         public MainWindow()
         {
             InitializeComponent();
@@ -119,22 +114,6 @@ namespace PostWatcher
             }
         }
 
-        private void AddItemsToDataGrid(List<Document> docs, DataItem filterItem)
-        {
-            foreach (var doc in docs)
-            {
-                AddItemsToDataGrid(doc, filterItem);
-            }
-        }
-
-        private void AddItemsToDataGrid(Document document, DataItem filterItem)
-        {
-            if (!document.Success || !document.HasData)
-                return;
-
-            AddItemsToDataGrid(document.Items, filterItem);
-        }
-
         private void AddItemsToDataGrid(List<DataItem> items, DataItem filterItem)
         {
             foreach (var item in items)
@@ -221,20 +200,22 @@ namespace PostWatcher
                     if (reader.HasRows)
                         while (reader.Read())
                         {
-                            var DataItem = new DataItem();
-                            DataItem.IntDocNumber = reader.GetString(0).Trim();
-                            DataItem.DateTime = reader.GetDateTime(1);
-                            DataItem.CityRecipientDescription = reader.GetString(2).Trim();
-                            DataItem.RecipientDescription = reader.GetString(3).Trim();
-                            DataItem.RecipientAddressDescription = reader.GetString(4).Trim();
-                            DataItem.RecipientContactPhone = reader.GetString(5).Trim();
-                            DataItem.Weight = reader.GetDouble(6);
-                            DataItem.Cost = reader.GetDouble(7);
-                            DataItem.CostOnSite = reader.GetDouble(8);
-                            DataItem.StateName = reader.GetString(9).Trim();
-                            DataItem.PrintedDescription = reader.GetString(10).Trim();
+                            var dataItem = new DataItem
+                            {
+                                IntDocNumber = reader.GetString(0).Trim(),
+                                DateTime = reader.GetDateTime(1),
+                                CityRecipientDescription = reader.GetString(2).Trim(),
+                                RecipientDescription = reader.GetString(3).Trim(),
+                                RecipientAddressDescription = reader.GetString(4).Trim(),
+                                RecipientContactPhone = reader.GetString(5).Trim(),
+                                Weight = reader.GetDouble(6),
+                                Cost = reader.GetDouble(7),
+                                CostOnSite = reader.GetDouble(8),
+                                StateName = reader.GetString(9).Trim(),
+                                PrintedDescription = reader.GetString(10).Trim()
+                            };
 
-                            AddItemsToDataGrid(DataItem, _filter);
+                            AddItemsToDataGrid(dataItem, _filter);
                         }
                 }
             }
@@ -330,17 +311,49 @@ namespace PostWatcher
 
         #region DataGrid events
 
-
         private async void MenuItem_OnClick(object sender, RoutedEventArgs e)
         {
             var selectedItems = DG_doc.SelectedItems.Cast<DataItem>().ToList();
             var methodPrepetries = CreateXmlListPropertiesForDocumentsTracking(selectedItems);
 
             OpenLoader("InternetDocument", "documentsTracking", methodPrepetries);
+
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                foreach (XmlNode node in methodPrepetries)
+                {
+                    using (SqlCommand cmd = new SqlCommand("SELECT * FROM [TTN] WHERE (TTN = @TTN)", connection))
+                    {
+                        cmd.Parameters.AddWithValue("@TTN", node.InnerText);
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (reader.HasRows)
+                                while (await reader.ReadAsync())
+                                {
+                                    var dataItem = new DataItem();
+                                    dataItem.IntDocNumber = reader.GetString(0).Trim();
+                                    dataItem.DateTime = reader.GetDateTime(1);
+                                    dataItem.CityRecipientDescription = reader.GetString(2).Trim();
+                                    dataItem.RecipientDescription = reader.GetString(3).Trim();
+                                    dataItem.RecipientAddressDescription = reader.GetString(4).Trim();
+                                    dataItem.RecipientContactPhone = reader.GetString(5).Trim();
+                                    dataItem.Weight = reader.GetDouble(6);
+                                    dataItem.Cost = reader.GetDouble(7);
+                                    dataItem.CostOnSite = reader.GetDouble(8);
+                                    dataItem.StateName = reader.GetString(9).Trim();
+                                    dataItem.PrintedDescription = reader.GetString(10).Trim();
+
+                                    AddItemsToDataGrid(dataItem, _filter);
+                                }
+                        }
+                    }
+                }
+            }
+
         }
-
-
-        #endregion
 
         private XmlNodeList CreateXmlListPropertiesForDocumentsTracking(List<DataItem> selectItems)
         {
@@ -357,8 +370,7 @@ namespace PostWatcher
             return xmlList;
         }
 
-
-
-    }
+        #endregion
+        }
 }
 
