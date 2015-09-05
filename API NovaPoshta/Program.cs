@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -21,41 +22,48 @@ namespace API_NovaPoshta
         static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.GetEncoding("Cyrillic");
-            DateTime left = DateTime.Parse("01.01.2015");
-            DateTime right = DateTime.Today;
+            var stw = new Stopwatch();
+            stw.Start();
+          var  _connectionString = ConfigurationManager.ConnectionStrings["connectToTTN"].ConnectionString;
+            stw.Stop();
 
-            string connectionString = ConfigurationManager.ConnectionStrings["connectToTTN"].ConnectionString;
+            Console.WriteLine(stw.E);
+
+            //DateTime left = DateTime.Parse("01.01.2015");
+            //DateTime right = DateTime.Today;
+
+            //string connectionString = ConfigurationManager.ConnectionStrings["connectToTTN"].ConnectionString;
 
       
-            using (SqlConnection connection = new SqlConnection(connectionString))
-            using (
-                SqlCommand cmd = new SqlCommand("SELECT * FROM [TTN] WHERE DateTime BETWEEN @left AND @right ",connection))
-            {
-                connection.Open();
-                cmd.Parameters.AddWithValue("@left", left);
-                cmd.Parameters.AddWithValue("@right", right);
+            //using (SqlConnection connection = new SqlConnection(connectionString))
+            //using (
+            //    SqlCommand cmd = new SqlCommand("SELECT * FROM [TTN] WHERE DateTime BETWEEN @left AND @right ",connection))
+            //{
+            //    connection.Open();
+            //    cmd.Parameters.AddWithValue("@left", left);
+            //    cmd.Parameters.AddWithValue("@right", right);
                 
-                using (var reader =  cmd.ExecuteReader())
-                {
-                    if (reader.HasRows)
-                        while (reader.Read())
-                        {
-                            var DataItem = new DataItem();
-                            DataItem.IntDocNumber = reader.GetString(0);
-                            DataItem.DateTime = reader.GetDateTime(1);
-                            DataItem.CityRecipientDescription = reader.GetString(2);
-                            DataItem.RecipientDescription = reader.GetString(3);
-                            DataItem.RecipientAddress = reader.GetString(4);
-                            DataItem.RecipientContactPhone = reader.GetString(5);
-                            Console.WriteLine(reader.GetDouble(6));
-                            DataItem.Weight = reader.GetDouble(6);
-                            DataItem.Cost = reader.GetDouble(7);
-                            DataItem.CostOnSite = reader.GetDouble(8);
-                            DataItem.StateName = reader.GetString(9);
-                            DataItem.PrintedDescription = reader.GetString(10);
-                        }
-                }
-            }
+            //    using (var reader =  cmd.ExecuteReader())
+            //    {
+            //        if (reader.HasRows)
+            //            while (reader.Read())
+            //            {
+            //                var DataItem = new DataItem();
+            //                DataItem.IntDocNumber = reader.GetString(0);
+            //                DataItem.DateTime = reader.GetDateTime(1);
+            //                DataItem.CityRecipientDescription = reader.GetString(2);
+            //                DataItem.RecipientDescription = reader.GetString(3);
+            //                DataItem.RecipientAddress = reader.GetString(4);
+            //                DataItem.RecipientContactPhone = reader.GetString(5);
+            //                Console.WriteLine(reader.GetDouble(6));
+            //                DataItem.Weight = reader.GetDouble(6);
+            //                DataItem.Cost = reader.GetDouble(7);
+            //                DataItem.CostOnSite = reader.GetDouble(8);
+            //                DataItem.StateName = reader.GetString(9);
+            //                DataItem.PrintedDescription = reader.GetString(10);
+            //            }
+            //    }
+            //}
        
             Console.ReadLine();
         }

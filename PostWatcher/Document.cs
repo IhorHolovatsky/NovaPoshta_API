@@ -88,7 +88,7 @@ namespace PostWatcher
         /// </summary>
         /// <param name="xmlRequest">xml request document</param>
         /// <returns></returns>
-        public async Task<XmlDocument> SendRequestXmlDocumentAsync(XmlDocument xmlRequest)
+        public static async Task<XmlDocument> SendRequestXmlDocumentAsync(XmlDocument xmlRequest)
         {
 
             var httpWebRequest = (HttpWebRequest)WebRequest.Create("https://api.novaposhta.ua/v2.0/xml/");
@@ -127,7 +127,7 @@ namespace PostWatcher
         /// </summary>
         /// <param name="xmlRequest">xml request document</param>
         /// <returns></returns>
-        public XmlDocument SendRequestXmlDocument(XmlDocument xmlRequest)
+        public static XmlDocument SendRequestXmlDocument(XmlDocument xmlRequest)
         {
             //HttpWebRequest to a Web Service
             var httpWebRequest = (HttpWebRequest)WebRequest.Create("https://api.novaposhta.ua/v2.0/xml/");
@@ -173,7 +173,7 @@ namespace PostWatcher
         /// <param name="methodName">Name of calling method in Web API</param>
         /// <param name="methodPropetries">Parameters of calling method</param>
         /// <returns></returns>
-        public XmlDocument MakeRequestXmlDocument(string APIkey, string modelName, string methodName, XmlNodeList methodPropetries)
+        public static XmlDocument MakeRequestXmlDocument(string APIkey, string modelName, string methodName, XmlNodeList methodPropetries)
         {
             string query = @"<?xml version='1.0' encoding='UTF-8'?><root><apiKey></apiKey><modelName></modelName>
 <calledMethod></calledMethod><methodProperties></methodProperties></root>";

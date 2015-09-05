@@ -22,19 +22,21 @@ namespace PostWatcher
     public partial class Loading
     {
         private CancellationTokenSource _cts;
-        private Task _findTask;
+        private Task _runnedTask;
         private readonly string _apiKey;
         private readonly string _modelName;
         private readonly string _methodName;
+        private readonly XmlNodeList _methodProperties;
         private static string _connectionString;
         private readonly object _locker = new object();
 
-        public Loading(string apiKey, string modelName, string methodName)
+        public Loading(string apiKey, string modelName, string methodName, XmlNodeList methodProperties)
         {
             InitializeComponent();
             _apiKey = apiKey;
             _modelName = modelName;
             _methodName = methodName;
+            _methodProperties = methodProperties;
             pb_state.Maximum = 100.0;
         }
 
@@ -58,6 +60,10 @@ namespace PostWatcher
                 case "getDocumentList":
                     await GetDocumentList();
                     break;
+                case "documentsTracking":
+                    await DocumentsTracking();
+                    break;
+
             }
         }
 
@@ -87,15 +93,15 @@ namespace PostWatcher
                     }
                 }
             }
-            
+
             right = DateTime.Today;
 
             _cts = new CancellationTokenSource();
 
             try
             {
-                _findTask = _GetDocumentList(left, right);
-                await _findTask;
+                _runnedTask = _GetDocumentList(left, right);
+                await _runnedTask;
             }
             catch (OperationCanceledException)
             {
@@ -104,7 +110,7 @@ namespace PostWatcher
             }
             finally
             {
-                _cts.Dispose();
+              _cts.Dispose();
             }
 
             this.Close();
@@ -134,13 +140,40 @@ namespace PostWatcher
                     while (b.Count > 0)
                     {
                         var task = Task.WhenAny(b);
+                        var xmlResponse = task.Result.Result;
+                       
+                        if (_cts.IsCancellationRequested)
+                            _cts.Token.ThrowIfCancellationRequested();
 
                         b.Remove(task.Result);
 
                         AsyncChangeControlState(pb_state, () => pb_state.Value += 100.0 / ((right - left).Days + 1));
+                        
+                        var newDocument = new Document();
+                        newDocument.LoadResponseXmlDocument(xmlResponse);
 
-                        if (_cts.IsCancellationRequested)
-                            _cts.Token.ThrowIfCancellationRequested();
+                        if (!newDocument.HasData) continue;
+                        if (!newDocument.Success)
+                        {
+                            MessageBox.Show("Invalid API key");
+                            Close();
+                        }
+                        
+                        lock (_locker)
+                        {
+                            using (SqlConnection connection = new SqlConnection(_connectionString))
+                            {
+                                connection.Open();
+                                foreach (var item in newDocument.Items)
+                                {
+                                    AddToDateBase(connection, item);
+                                }
+                            }
+                        }
+
+
+                   
+                   
                     }
                 });
         }
@@ -185,50 +218,93 @@ namespace PostWatcher
                 }
                 catch (SqlException e)
                 {
-                   return;
+                    return;
                 }
             }
         }
 
         #endregion
 
+        #region documentsTracking
+        private async Task DocumentsTracking()
+        {
+            _cts = new CancellationTokenSource();
+
+            try
+            {
+                _runnedTask = _DocumentsTracking();
+                await _runnedTask;
+            }
+            catch (OperationCanceledException)
+            {
+                l_state.Content = "Відмінено";
+                this.Close();
+            }
+            finally
+            {
+                _cts.Dispose();
+            }
+
+            this.Close();
+        }
+
+        private async Task _DocumentsTracking()
+        {
+            var task = await MakeTask(_modelName, _methodName, _methodProperties);
+
+            var document = new Document();
+            document.LoadResponseXmlDocument(task);
+
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                foreach (var item in document.Items)
+                {
+                    using (
+                        SqlCommand cmd =
+                            new SqlCommand(
+                                "UPDATE [TTN] SET StateName = @StateName WHERE TTN = @TTN", connection))
+                    {
+                        cmd.Parameters.AddWithValue("@TTN", item.IntDocNumber);
+                        cmd.Parameters.AddWithValue("@StateName", item.StateName);
+
+                        try
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+                        catch (SqlException e)
+                        {
+                            return;
+                        }
+                    }
+                }
+            }
+
+
+
+        }
+
+        
+        #endregion
+
+
         private async Task<XmlDocument> MakeTask(string modelName, string methodName, XmlNodeList xmlList)
         {
-            var newDocument = new Document();
-            var xmlQuery = newDocument.MakeRequestXmlDocument(_apiKey, modelName, methodName, xmlList);
+           
+            var xmlQuery = Document.MakeRequestXmlDocument(_apiKey, modelName, methodName, xmlList);
 
             XmlDocument xmlResponse = null;
             try
             {
                 Thread.Sleep(new Random().Next(50));
-                xmlResponse = await newDocument.SendRequestXmlDocumentAsync(xmlQuery);
+                xmlResponse = await Document.SendRequestXmlDocumentAsync(xmlQuery);
             }
             catch (WebException e)
             {
                 MessageBox.Show(e.Message);
                 Close();
             }
-
-            newDocument.LoadResponseXmlDocument(xmlResponse);
-            if (!newDocument.Success)
-            {
-                MessageBox.Show("Invalid API key");
-                this.Close();
-            }
-
-
-            lock (_locker)
-            {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                {
-                    connection.Open();
-                    foreach (var item in newDocument.Items)
-                    {
-                        AddToDateBase(connection, item);
-                    }
-                }
-            }
-
 
             return xmlResponse;
         }
@@ -262,8 +338,8 @@ namespace PostWatcher
 
         private void Btn_cancel_OnClick(object sender, RoutedEventArgs e)
         {
-            if (_findTask == null) return;
-            if (_findTask.IsCompleted) return;
+            if (_runnedTask == null) return;
+            if (_runnedTask.IsCompleted) return;
 
             _cts.Cancel();
         }

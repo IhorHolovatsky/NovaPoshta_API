@@ -60,17 +60,17 @@ namespace PostWatcher
                 newWindwowApIkey.ShowDialog();
                 _apiKey = (string)rk.GetValue("API key");
 
-                OpenLoader("InternetDocument", "getDocumentList");
+                OpenLoader("InternetDocument", "getDocumentList", null);
             }
 
             _apiKey = (string)rk.GetValue("API key");
 
-            OpenLoader("InternetDocument", "getDocumentList");
+            OpenLoader("InternetDocument", "getDocumentList", null);
         }
 
-        private void OpenLoader(string modelName, string methodName)
+        private void OpenLoader(string modelName, string methodName, XmlNodeList methodProperties)
         {
-            var newLoading = new Loading(_apiKey, modelName, methodName);
+            var newLoading = new Loading(_apiKey, modelName, methodName, methodProperties);
             newLoading.ShowDialog();
         }
 
@@ -334,29 +334,9 @@ namespace PostWatcher
         private async void MenuItem_OnClick(object sender, RoutedEventArgs e)
         {
             var selectedItems = DG_doc.SelectedItems.Cast<DataItem>().ToList();
-            var dataGridItems = DG_doc.Items;
+            var methodPrepetries = CreateXmlListPropertiesForDocumentsTracking(selectedItems);
 
-
-
-            var newXmlDocument = await Task<List<DataItem>>.Factory.StartNew(() =>
-            {
-                var methodPrepetries = CreateXmlListPropertiesForDocumentsTracking(selectedItems);
-
-                //                var task = MakeTask("InternetDocument", "documentsTracking", methodPrepetries);
-
-                var document = new Document();
-                //              document.LoadResponseXmlDocument(task.Result);
-
-                return document.Items;
-            });
-
-            for (var i = 0; i < selectedItems.Count; i++)
-            {
-                var index = dataGridItems.IndexOf(selectedItems[i]);
-                selectedItems[i].StateName = newXmlDocument[i].StateName;
-                //  var oldResponseList = await DeSerializeDocuments();
-                dataGridItems[index] = selectedItems[i];
-            }
+            OpenLoader("InternetDocument", "documentsTracking", methodPrepetries);
         }
 
 
