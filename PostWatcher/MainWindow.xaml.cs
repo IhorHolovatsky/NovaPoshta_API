@@ -89,7 +89,7 @@ namespace PostWatcher
 
         private void menuResresh_OnClick(object sender, RoutedEventArgs e)
         {
-            Btn_OKfilter_OnClick(sender, e);
+           
         }
 
         #endregion
@@ -170,17 +170,7 @@ namespace PostWatcher
 
         #region BUTTONS
 
-        //TODO: must take items from DB
-        private async void Btn_OKfilter_OnClick(object sender, RoutedEventArgs e)
-        {
-            var items = DG_doc.Items.Cast<DataItem>().ToList();
-            DG_doc.Items.Clear();
-            btn_OKfilter.IsEnabled = false;
-            await Task.Factory.StartNew(() => AddItemsToDataGrid(items, _filter));
-            btn_OKfilter.IsEnabled = true;
-        }
-
-
+     
         private async void Btn_selectDataOK_OnClick(object sender, RoutedEventArgs e)
         {
             DG_doc.Items.Clear();

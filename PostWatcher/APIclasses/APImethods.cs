@@ -188,7 +188,6 @@ namespace PostWatcher
             doc.LoadFromXml(xmlResponse);
             return doc;
         }
-
         public Document<DataItem> GetDocumentList(XmlNodeList methodProperties)
         {
             var xmlResponse = MakeTask("InternetDocument", "getDocumentList", methodProperties);

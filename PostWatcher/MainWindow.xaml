@@ -26,17 +26,7 @@
             </StackPanel>
             <StackPanel x:Name="InputRow" Orientation="Horizontal" Height="148" >
                 <StackPanel x:Name="GroupBoxes" VerticalAlignment="Top" HorizontalAlignment="Left"  Orientation="Horizontal">
-                    <GroupBox Background="Cornsilk" Header="Search" BorderBrush="Crimson" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="10,3,6,3" Height="138" Width="361">
-                        <Grid Margin="2,0,-2,1">
-                            <DatePicker x:Name="DatePickerLeft"  HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" Width="136"/>
-                            <Button x:Name="btn_selectDataOK" Content="OK" HorizontalAlignment="Left"  VerticalAlignment="Top" Width="69" Click="Btn_selectDataOK_OnClick" Margin="270,75,0,0" Height="30"/>
-                            <Label Content="From" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.319,-1.42"/>
-                            <Label Content="To" HorizontalAlignment="Left" Margin="201,10,0,0" VerticalAlignment="Top" RenderTransformOrigin="-0.043,-1.305"/>
-                            <Button x:Name="btn_cancel" Content="Cancel" HorizontalAlignment="Left"  VerticalAlignment="Top" Width="69" Margin="10,75,0,0" Height="30"/>
-                            <DatePicker x:Name="DatePickerRight"  HorizontalAlignment="Left" Margin="201,36,0,0" VerticalAlignment="Top" Width="136"/>
-
-                        </Grid>
-                    </GroupBox>
+                    
 
                     <GroupBox Background="Cornsilk" Header="Filter" BorderBrush="Crimson" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="6,3,6,3">
                         <Grid Margin="0,-6,-2,-6">
@@ -44,7 +34,7 @@
                                 <ColumnDefinition Width="40*"/>
                                 <ColumnDefinition Width="303*"/>
                             </Grid.ColumnDefinitions>
-                            <ComboBox x:Name="cb_StateName" HorizontalAlignment="Left" Margin="10,38,0,0" VerticalAlignment="Top" Width="177" Grid.ColumnSpan="2" RenderTransformOrigin="0.511,1.309" Text="Статуси які відображати" >
+                            <ComboBox x:Name="cb_StateName"  HorizontalAlignment="Left" Margin="10,38,0,0" VerticalAlignment="Top" Width="177" Grid.ColumnSpan="2" RenderTransformOrigin="0.511,1.309" Text="Статуси які відображати" >
 
                                 <CheckBox Name="chb_delievered" IsChecked="True" Checked="Chb_delievered_OnChecked" Unchecked="Chb_delievered_OnUnchecked">Одержаний</CheckBox>
                                 <CheckBox Name="chb_Proccessing" IsChecked="True" Checked="Chb_Proccessing_OnChecked" Unchecked="Chb_Proccessing_OnUnchecked">Замовлення в обробці</CheckBox>
@@ -61,19 +51,29 @@
                                 <TextBlock Text=""/>-->
 
                             </ComboBox>
-                            <ComboBox HorizontalAlignment="Left" Margin="10,96,0,0" VerticalAlignment="Top" Width="177" Grid.Column="1">
+                            <ComboBox HorizontalAlignment="Left" Margin="10,96,0,10" VerticalAlignment="Top" Width="177" Grid.Column="1">
                                 <TextBlock Text="Роздруковано"></TextBlock>
                                 <TextBlock Text=""></TextBlock>
                             </ComboBox>
                             <Label Content="Статус замовлення" Grid.Column="1" HorizontalAlignment="Left" Margin="10,12,0,0" VerticalAlignment="Top" />
-                            <TextBox x:Name="tb_IntDoc" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="352,10,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="234" TextChanged="Tb_IntDoc_OnTextChanged"/>
+                            <TextBox x:Name="tb_IntDoc" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="352,10,10,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="234" TextChanged="Tb_IntDoc_OnTextChanged"/>
                             <Label Content="Статус документа" Grid.Column="1" HorizontalAlignment="Left" Margin="10,70,0,0" VerticalAlignment="Top"/>
-                            <TextBox x:Name="tb_RecipientPhone" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="352,37,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="234" TextChanged="Tb_RecipientPhone_OnTextChanged"/>
-                            <TextBox x:Name="tb_RecipientCityDescription" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="352,65,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="234" TextChanged="Tb_RecipientCityDescription_OnTextChanged"/>
+                            <TextBox x:Name="tb_RecipientPhone" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="352,50,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="234" TextChanged="Tb_RecipientPhone_OnTextChanged"/>
+                            <TextBox x:Name="tb_RecipientCityDescription" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="352,92,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="234" TextChanged="Tb_RecipientCityDescription_OnTextChanged"/>
                             <Label Content="Номер ТТН" Grid.Column="1" HorizontalAlignment="Left" Margin="265,12,0,0" VerticalAlignment="Top" RenderTransformOrigin="-0.028,1"/>
-                            <Label Content="Телефон отримувача" Grid.Column="1" HorizontalAlignment="Left" Margin="211,38,0,0" VerticalAlignment="Top"/>
-                            <Label Content="Місто отримувача" Grid.Column="1" HorizontalAlignment="Left" Margin="227,65,0,0" VerticalAlignment="Top"/>
-                            <Button x:Name="btn_OKfilter" Content="OK" Grid.Column="1" HorizontalAlignment="Left" Margin="500,93,0,0" VerticalAlignment="Top" Width="76" Click="Btn_OKfilter_OnClick" Height="25"/>
+                            <Label Content="Телефон отримувача" Grid.Column="1" HorizontalAlignment="Left" Margin="211,51,0,0" VerticalAlignment="Top"/>
+                            <Label Content="Місто отримувача" Grid.Column="1" HorizontalAlignment="Left" Margin="227,92,0,0" VerticalAlignment="Top"/>
+
+                        </Grid>
+                    </GroupBox>
+                    <GroupBox Background="Cornsilk" Header="Search" BorderBrush="Crimson" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="10,3,6,3" Height="138" Width="361">
+                        <Grid Margin="2,0,-2,1">
+                            <DatePicker x:Name="DatePickerLeft"  HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" Width="136"/>
+                            <Button x:Name="btn_selectDataOK" Content="OK" HorizontalAlignment="Left"  VerticalAlignment="Top" Width="69" Click="Btn_selectDataOK_OnClick" Margin="270,75,0,0" Height="30"/>
+                            <Label Content="From" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.319,-1.42"/>
+                            <Label Content="To" HorizontalAlignment="Left" Margin="201,10,0,0" VerticalAlignment="Top" RenderTransformOrigin="-0.043,-1.305"/>
+                            <DatePicker x:Name="DatePickerRight"  HorizontalAlignment="Left" Margin="201,36,0,0" VerticalAlignment="Top" Width="136"/>
+
                         </Grid>
                     </GroupBox>
                 </StackPanel>
@@ -208,9 +208,9 @@
                     <DataGrid.Resources>
                         <ContextMenu  x:Key="DataRowContextMenu">
                             <MenuItem   Header="Refresh" Click="MenuItem_OnClick">
-                                
+
                             </MenuItem>
-                            </ContextMenu>
+                        </ContextMenu>
                     </DataGrid.Resources>
                     <DataGrid.RowStyle >
                         <Style TargetType="{x:Type DataGridRow}">

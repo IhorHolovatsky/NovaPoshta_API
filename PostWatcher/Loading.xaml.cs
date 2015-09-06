@@ -337,37 +337,7 @@ namespace PostWatcher
         #region getStreet
         #endregion
 
-        private async Task<XmlDocument> MakeTask(string modelName, string methodName, XmlNodeList xmlList)
-        {
-
-            var xmlQuery = APImethods.MakeRequestXmlDocument(_apiKey, modelName, methodName, xmlList);
-
-            XmlDocument xmlResponse = null;
-            try
-            {
-                Thread.Sleep(new Random().Next(50));
-                xmlResponse = await APImethods.SendRequestXmlDocumentAsync(xmlQuery);
-            }
-            catch (WebException e)
-            {
-                MessageBox.Show(e.Message);
-                Close();
-            }
-
-            return xmlResponse;
-        }
-
-
-        private void AsyncChangeControlState(Control element, Action action)
-        {
-            if (element.Dispatcher.CheckAccess())
-                action();
-            else
-                element.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
-                    action);
-        }
-
-        protected async Task<bool> CheckConnectionAsync()
+       protected async Task<bool> CheckConnectionAsync()
         {
             try
             {
@@ -381,9 +351,7 @@ namespace PostWatcher
                 return false;
             }
         }
-
-
-
+        
         private void Btn_cancel_OnClick(object sender, RoutedEventArgs e)
         {
             if (_runnedTask == null) return;
