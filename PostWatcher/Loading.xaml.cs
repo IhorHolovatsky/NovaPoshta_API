@@ -40,9 +40,9 @@ namespace PostWatcher
             _methodProperties = methodProperties;
             _apiMethods = new APImethods(apiKey);
             pb_state.Maximum = 100.0;
-            
+
         }
-        
+
         private async void Loading_OnLoaded(object sender, RoutedEventArgs e)
         {
             _connectionString = ConfigurationManager.ConnectionStrings["connectToTTN"].ConnectionString;
@@ -66,6 +66,7 @@ namespace PostWatcher
                 {
                     case "getDocumentList":
                         await GetDocumentList();
+                       
                         break;
                     case "documentsTracking":
                         await DocumentsTracking();
@@ -74,8 +75,7 @@ namespace PostWatcher
                         await GetCities();
                         break;
                     case "RefreshLibraries":
-                        await GetCities();
-
+                       await GetCities();
                         break;
 
                 }
@@ -342,7 +342,7 @@ namespace PostWatcher
         #region getStreet
         #endregion
 
-       protected async Task<bool> CheckConnectionAsync()
+        protected async Task<bool> CheckConnectionAsync()
         {
             try
             {
@@ -356,7 +356,7 @@ namespace PostWatcher
                 return false;
             }
         }
-        
+
         private void Btn_cancel_OnClick(object sender, RoutedEventArgs e)
         {
             if (_runnedTask == null) return;
