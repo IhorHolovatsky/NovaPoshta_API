@@ -24,7 +24,7 @@ namespace PostWatcher
         private readonly DataItem _filter = new DataItem();
         private string _connectionString;
         private readonly List<string> _stateFilter = new List<string>(10);
-    
+
         public MainWindow()
         {
             InitializeComponent();
@@ -89,7 +89,7 @@ namespace PostWatcher
 
         private void menuResresh_OnClick(object sender, RoutedEventArgs e)
         {
-           
+
         }
 
         #endregion
@@ -170,7 +170,7 @@ namespace PostWatcher
 
         #region BUTTONS
 
-     
+
         private async void Btn_selectDataOK_OnClick(object sender, RoutedEventArgs e)
         {
             DG_doc.Items.Clear();
@@ -192,20 +192,20 @@ namespace PostWatcher
                     if (reader.HasRows)
                         while (reader.Read())
                         {
-                            var dataItem = new DataItem
-                            {
-                                IntDocNumber = reader.GetString(0).Trim(),
-                                DateTime = reader.GetDateTime(1),
-                                CityRecipientDescription = reader.GetString(2).Trim(),
-                                RecipientDescription = reader.GetString(3).Trim(),
-                                RecipientAddressDescription = reader.GetString(4).Trim(),
-                                RecipientContactPhone = reader.GetString(5).Trim(),
-                                Weight = reader.GetDouble(6),
-                                Cost = reader.GetDouble(7),
-                                CostOnSite = reader.GetDouble(8),
-                                StateName = reader.GetString(9).Trim(),
-                                PrintedDescription = reader.GetString(10).Trim()
-                            };
+                            var dataItem = new DataItem();
+
+                            dataItem.IntDocNumber = reader.GetString(0).Trim();
+                            dataItem.DateTime = reader.GetDateTime(1);
+                            dataItem.CityRecipientDescription = reader.GetString(2).Trim();
+                            dataItem.RecipientDescription = reader.GetString(3).Trim();
+                            dataItem.RecipientAddressDescription = reader.GetString(4).Trim();
+                            dataItem.RecipientContactPhone = reader.GetString(5).Trim();
+                            dataItem.Weight = reader.GetDouble(6);
+                            dataItem.Cost = reader.GetDouble(7);
+                            dataItem.CostOnSite = reader.GetDouble(8);
+                            dataItem.StateName = reader.GetString(9).Trim();
+                            dataItem.PrintedDescription = reader.GetString(10).Trim();
+
 
                             AddItemsToDataGrid(dataItem, _filter);
                         }
@@ -303,12 +303,18 @@ namespace PostWatcher
 
         #region DataGrid events
 
-        private async void MenuItem_OnClick(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// getDocumentList  give Created stateName
+        /// documentTracking give just in time stateName 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void Track_OnClick(object sender, RoutedEventArgs e)
         {
             var selectedItems = DG_doc.SelectedItems.Cast<DataItem>().ToList();
-           
+
             var methodPrepetries = CreateXmlListPropertiesForDocumentsTracking(selectedItems);
-           
+
             OpenLoader("InternetDocument", "documentsTracking", methodPrepetries);
 
 
@@ -317,9 +323,9 @@ namespace PostWatcher
                 await connection.OpenAsync();
                 int i = 0;
 
-                foreach (XmlNode item in methodPrepetries[0].ChildNodes) 
+                foreach (XmlNode item in methodPrepetries[0].ChildNodes)
                 {
-            using (SqlCommand cmd = new SqlCommand("SELECT * FROM [TTN] WHERE (TTN = @TTN)", connection))
+                    using (SqlCommand cmd = new SqlCommand("SELECT * FROM [TTN] WHERE (TTN = @TTN)", connection))
                     {
                         cmd.Parameters.AddWithValue("@TTN", item.InnerText);
                         using (var reader = await cmd.ExecuteReaderAsync())
@@ -339,7 +345,7 @@ namespace PostWatcher
                                     dataItem.CostOnSite = reader.GetDouble(8);
                                     dataItem.StateName = reader.GetString(9).Trim();
                                     dataItem.PrintedDescription = reader.GetString(10).Trim();
-                                    
+
                                     var index = DG_doc.Items.IndexOf(selectedItems[i]);
                                     DG_doc.Items[index] = dataItem;
                                     i++;
@@ -351,7 +357,7 @@ namespace PostWatcher
 
         }
 
-        private XmlNodeList CreateXmlListPropertiesForDocumentsTracking(List<DataItem> selectItems)
+        private static XmlNodeList CreateXmlListPropertiesForDocumentsTracking(List<DataItem> selectItems)
         {
             var xmlDoc = new XmlDocument();
             var methodPropetriesNode = xmlDoc.CreateNode(XmlNodeType.Element, "Documents", null);
@@ -367,6 +373,6 @@ namespace PostWatcher
         }
 
         #endregion
-        }
+    }
 }
 

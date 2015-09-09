@@ -207,7 +207,7 @@
                     </DataGrid.Columns>
                     <DataGrid.Resources>
                         <ContextMenu  x:Key="DataRowContextMenu">
-                            <MenuItem   Header="Refresh" Click="MenuItem_OnClick">
+                            <MenuItem   Header="Track" Click="Track_OnClick">
 
                             </MenuItem>
                         </ContextMenu>
