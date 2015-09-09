@@ -164,19 +164,19 @@ namespace PostWatcher
         }
 
 
-        public async Task<Document<DataItem>> DocumentsTrackingAsync(XmlNodeList methodProperties)
+        public async Task<Document<TrackingItem>> DocumentsTrackingAsync(XmlNodeList methodProperties)
         {
             var task = await MakeTask("InternetDocument", "documentsTracking", methodProperties);
 
-            var document = new Document<DataItem>();
+            var document = new Document<TrackingItem>();
             document.LoadFromXml(task);
             return document;
         } 
-        public Document<DataItem> DocumentsTracking(XmlNodeList methodProperties)
+        public Document<TrackingItem> DocumentsTracking(XmlNodeList methodProperties)
         {
             var task = MakeTask("InternetDocument", "documentsTracking", methodProperties);
 
-            var document = new Document<DataItem>();
+            var document = new Document<TrackingItem>();
             document.LoadFromXml(task.Result);
             return document;
         }

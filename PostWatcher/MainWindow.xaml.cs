@@ -306,6 +306,10 @@ namespace PostWatcher
         private async void MenuItem_OnClick(object sender, RoutedEventArgs e)
         {
             var selectedItems = DG_doc.SelectedItems.Cast<DataItem>().ToList();
+
+            var leftDate = selectedItems.Min(dataTime=> dataTime.DateTime);
+            var rightDate = selectedItems.Max(dataTime=> dataTime.DateTime);
+            MessageBox.Show(leftDate.ToLongDateString() + rightDate.ToLongDateString());
             var methodPrepetries = CreateXmlListPropertiesForDocumentsTracking(selectedItems);
 
             OpenLoader("InternetDocument", "documentsTracking", methodPrepetries);

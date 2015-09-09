@@ -27,7 +27,7 @@ namespace API_NovaPoshta
           var  _connectionString = ConfigurationManager.ConnectionStrings["connectToTTN"].ConnectionString;
             stw.Stop();
 
-            Console.WriteLine(stw.E);
+            
 
             //DateTime left = DateTime.Parse("01.01.2015");
             //DateTime right = DateTime.Today;

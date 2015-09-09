@@ -40,8 +40,9 @@ namespace PostWatcher
             _methodProperties = methodProperties;
             _apiMethods = new APImethods(apiKey);
             pb_state.Maximum = 100.0;
+            
         }
-
+        
         private async void Loading_OnLoaded(object sender, RoutedEventArgs e)
         {
             _connectionString = ConfigurationManager.ConnectionStrings["connectToTTN"].ConnectionString;
@@ -54,25 +55,30 @@ namespace PostWatcher
                 MessageBox.Show("No Internet Connection!");
                 this.Close();
             }
-            l_state.Content = "Запит обробляється...";
-
-            //Methods in web api
-            switch (_methodName)
+            else
             {
-                case "getDocumentList":
-                    await GetDocumentList();
-                    break;
-                case "documentsTracking":
-                    await DocumentsTracking();
-                    break;
-                case "getCities":
-                    await GetCities();
-                    break;
-                case "RefreshLibraries":
-                    await GetCities();
 
-                    break;
 
+                l_state.Content = "Запит обробляється...";
+
+                //Methods in web api
+                switch (_methodName)
+                {
+                    case "getDocumentList":
+                        await GetDocumentList();
+                        break;
+                    case "documentsTracking":
+                        await DocumentsTracking();
+                        break;
+                    case "getCities":
+                        await GetCities();
+                        break;
+                    case "RefreshLibraries":
+                        await GetCities();
+
+                        break;
+
+                }
             }
             this.Close();
         }
@@ -248,9 +254,8 @@ namespace PostWatcher
 
         private async Task _DocumentsTracking()
         {
-            var document = await _apiMethods.GetDocumentListAsync(_methodProperties);
+            var document = await _apiMethods.DocumentsTrackingAsync(_methodProperties);
 
-#warning document tracking dont return intDocnumber
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
@@ -263,7 +268,7 @@ namespace PostWatcher
                             new SqlCommand(
                                 "UPDATE [TTN] SET StateName = @StateName WHERE TTN = @TTN", connection))
                     {
-                        cmd.Parameters.AddWithValue("@TTN", item.IntDocNumber);
+                        cmd.Parameters.AddWithValue("@TTN", item.Barcode);
                         cmd.Parameters.AddWithValue("@StateName", item.StateName);
 
                         try
