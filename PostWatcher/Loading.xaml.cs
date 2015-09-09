@@ -21,7 +21,8 @@ namespace PostWatcher
     /// </summary>
     public partial class Loading
     {
-        private CancellationTokenSource _cts;
+        private CancellationTokenSource _cts = new CancellationTokenSource();
+
         private APImethods _apiMethods;
         private Task _runnedTask;
         private readonly string _apiKey;
@@ -239,8 +240,7 @@ namespace PostWatcher
         #region documentsTracking
         private async Task DocumentsTracking()
         {
-            _cts = new CancellationTokenSource();
-
+         
             try
             {
                 await _DocumentsTracking();
@@ -248,6 +248,7 @@ namespace PostWatcher
             catch (OperationCanceledException)
             {
                 l_state.Content = "Відмінено";
+                MessageBox.Show("Відмінено");
                 this.Close();
             }
             finally
@@ -286,6 +287,8 @@ namespace PostWatcher
                         }
 
                         pb_state.Value += 100.0 / i;
+                        if (_cts.IsCancellationRequested)
+                            throw new OperationCanceledException();
                     }
                 }
             }
@@ -299,6 +302,9 @@ namespace PostWatcher
         private async Task GetCities()
         {
             var doc = await _apiMethods.GetCitiesAsync(_methodProperties);
+
+            if(_cts.IsCancellationRequested)
+                throw new OperationCanceledException();
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
@@ -364,8 +370,7 @@ namespace PostWatcher
 
         private void Btn_cancel_OnClick(object sender, RoutedEventArgs e)
         {
-            if (_runnedTask == null) return;
-            if (_runnedTask.IsCompleted) return;
+        
 
             _cts.Cancel();
         }
