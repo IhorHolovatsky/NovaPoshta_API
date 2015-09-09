@@ -196,6 +196,21 @@ namespace PostWatcher
             return doc;
         }
 
+        public async Task<Document<Warehouse>> GetWarehousesAsync(XmlNodeList methodProperties)
+        {
+            var xmlResponse = await MakeTask("Address", "getWarehouses", methodProperties);
+            var doc = new Document<Warehouse>();
+            doc.LoadFromXml(xmlResponse);
+            return doc;
+        }
+        public Document<Warehouse> GetWarehouses(XmlNodeList methodProperties)
+        {
+            var xmlResponse = MakeTask("Address", "getWarehouses", methodProperties).Result;
+            var doc = new Document<Warehouse>();
+            doc.LoadFromXml(xmlResponse);
+            return doc;
+        }
+        
         private async Task<XmlDocument> MakeTask(string modelName, string methodName, XmlNodeList xmlList)
         {
 

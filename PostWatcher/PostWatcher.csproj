@@ -72,6 +72,8 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="APIclasses\TrackingItem.cs" />
+    <Compile Include="APIclasses\Week.cs" />
+    <Compile Include="APIclasses\Warehouse.cs" />
     <Page Include="APIkey.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

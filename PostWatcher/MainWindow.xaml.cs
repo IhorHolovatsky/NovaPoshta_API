@@ -39,7 +39,7 @@ namespace PostWatcher
             _connectionString = ConfigurationManager.ConnectionStrings["connectToTTN"].ConnectionString;
             var rk = Registry.CurrentUser.OpenSubKey("PostWatcher");
             bool isLogined = true;
-
+         
             if (rk == null)
             {
                 rk = Registry.CurrentUser.CreateSubKey("PostWatcher");

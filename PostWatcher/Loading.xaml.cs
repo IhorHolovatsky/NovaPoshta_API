@@ -48,6 +48,7 @@ namespace PostWatcher
         {
             _connectionString = ConfigurationManager.ConnectionStrings["connectToTTN"].ConnectionString;
 
+
             l_state.Content = "Перевірка з'єднання з інтернетом...";
 
             bool isInternetConnection = await CheckConnectionAsync();
@@ -67,7 +68,7 @@ namespace PostWatcher
                 {
                     case "getDocumentList":
                         await GetDocumentList();
-                       
+
                         break;
                     case "documentsTracking":
                         await DocumentsTracking();
@@ -76,7 +77,8 @@ namespace PostWatcher
                         await GetCities();
                         break;
                     case "RefreshLibraries":
-                       await GetCities();
+                        await GetCities();
+                        await GetWarehouses();
                         break;
 
                 }
@@ -154,8 +156,7 @@ namespace PostWatcher
             {
                 var task = await Task.WhenAny(b);
 
-                if (_cts.IsCancellationRequested)
-                    _cts.Token.ThrowIfCancellationRequested();
+                _cts.Token.ThrowIfCancellationRequested();
 
                 b.Remove(task);
 
@@ -231,7 +232,7 @@ namespace PostWatcher
                         "RecipientContactPhone = @RecipientContactPhone, Weight = @Weight, Cost = @Cost, CostOnSite = @CostOnSite, StateName = @StateName," +
                         " PrintedDescription = @PrintedDescription, APIKey = @APIKey WHERE TTN = @TTN";
                     cmd.ExecuteNonQuery();
-               }
+                }
             }
         }
 
@@ -240,7 +241,7 @@ namespace PostWatcher
         #region documentsTracking
         private async Task DocumentsTracking()
         {
-         
+
             try
             {
                 await _DocumentsTracking();
@@ -265,7 +266,7 @@ namespace PostWatcher
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
-                await connection.OpenAsync();
+                await connection.OpenAsync(_cts.Token);
                 var i = document.Items.Count;
                 foreach (var item in document.Items)
                 {
@@ -287,8 +288,9 @@ namespace PostWatcher
                         }
 
                         pb_state.Value += 100.0 / i;
-                        if (_cts.IsCancellationRequested)
-                            throw new OperationCanceledException();
+
+                        _cts.Token.ThrowIfCancellationRequested();
+
                     }
                 }
             }
@@ -303,12 +305,12 @@ namespace PostWatcher
         {
             var doc = await _apiMethods.GetCitiesAsync(_methodProperties);
 
-            if(_cts.IsCancellationRequested)
+            if (_cts.IsCancellationRequested)
                 throw new OperationCanceledException();
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
-                await connection.OpenAsync();
+                await connection.OpenAsync(_cts.Token);
                 await AddCitiesToDataBase(doc, connection);
             }
         }
@@ -353,6 +355,120 @@ namespace PostWatcher
         #region getStreet
         #endregion
 
+        #region getWarehouses
+
+        public async Task GetWarehouses()
+        {
+            try
+            {
+                await _GetWarehouses();
+            }
+            catch (OperationCanceledException)
+            {
+                l_state.Content = "Відмінено";
+                MessageBox.Show("Відмінено");
+                this.Close();
+            }
+            finally
+            {
+                _cts.Dispose();
+            }
+        }
+
+        public async Task _GetWarehouses()
+        {
+            using (SqlConnection connectionCity = new SqlConnection(_connectionString))
+            {
+                await connectionCity.OpenAsync(_cts.Token);
+
+                int count;
+                using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM [Cities]", connectionCity))
+                {
+                   count = (int) cmd.ExecuteScalar();
+                }
+                
+                using (SqlCommand cmd = new SqlCommand("SELECT Ref FROM [Cities]", connectionCity))
+                {
+                    using (var reader = await cmd.ExecuteReaderAsync(_cts.Token))
+                    {
+                        while (await reader.ReadAsync(_cts.Token))
+                        {
+                            var cityRef = reader.GetString(0);
+                            var methodProperties = CreateXmlListPropertiesForGetWarehouses(cityRef);
+                            var document = await _apiMethods.GetWarehousesAsync(methodProperties);
+                            using (SqlConnection connectionWarehouses = new SqlConnection(_connectionString))
+                            {
+                                await connectionWarehouses.OpenAsync(_cts.Token);
+
+                                if (!document.HasData) continue;
+
+                                foreach (var item in document.Items)
+                                {
+                                     using (SqlCommand cmd2 = new SqlCommand("INSERT INTO [Warehouses] (Description, DescriptionRu, Phone, TypeOfWarehouse," +
+                                                                        " Ref, Number, CityRef, Longitude, Latitude) VALUES (@Description, @DescriptionRu, @Phone, @TypeOfWarehouse," +
+                                                                        " @Ref, @Number, @CityRef, @Longitude, @Latitude)", connectionWarehouses))
+                                     {
+                                         cmd2.Parameters.AddWithValue("@Description", item.Description);
+                                         cmd2.Parameters.AddWithValue("@DescriptionRu", item.DescriptionRu);
+                                         cmd2.Parameters.AddWithValue("@Phone", item.Phone);
+                                         cmd2.Parameters.AddWithValue("@TypeOfWarehouse", item.TypeOfWarehouse);
+                                         cmd2.Parameters.AddWithValue("@Ref", item.Ref);
+                                         cmd2.Parameters.AddWithValue("@Number", item.Number);
+                                         cmd2.Parameters.AddWithValue("@CityRef", item.CityRef);
+                                 cmd2.Parameters.AddWithValue("@Longitude", item.Longitude);
+                                         cmd2.Parameters.AddWithValue("@Latitude", item.Latitude);
+                                         await cmd2.ExecuteNonQueryAsync(_cts.Token);
+
+                                         cmd2.CommandText = "INSERT INTO [Reception] (Ref, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) " +
+                                                            "VALUES (@Ref, @Monday, @Tuesday, @Wednesday, @Thursday, @Friday, @Saturday, @Sunday)";
+                                         cmd2.Parameters.AddWithValue("@Monday", item.Reception.Monday);
+                                         cmd2.Parameters.AddWithValue("@Tuesday", item.Reception.Tuesday);
+                                         cmd2.Parameters.AddWithValue("@Wednesday", item.Reception.Wednesday);
+                                         cmd2.Parameters.AddWithValue("@Thursday", item.Reception.Thursday);
+                                         cmd2.Parameters.AddWithValue("@Friday", item.Reception.Friday);
+                                         cmd2.Parameters.AddWithValue("@Saturday", item.Reception.Saturday);
+                                         cmd2.Parameters.AddWithValue("@Sunday", item.Reception.Sunday);
+                                         await cmd2.ExecuteNonQueryAsync(_cts.Token);
+
+                                         cmd2.CommandText = "INSERT INTO [Delivery] (Ref, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) " +
+                                                           "VALUES (@Ref, @Monday, @Tuesday, @Wednesday, @Thursday, @Friday, @Saturday, @Sunday)";
+                                         cmd2.Parameters["@Monday"].Value = item.Delivery.Monday;
+                                         cmd2.Parameters["@Tuesday"].Value = item.Delivery.Tuesday;
+                                         cmd2.Parameters["@Wednesday"].Value = item.Delivery.Wednesday;
+                                         cmd2.Parameters["@Thursday"].Value = item.Delivery.Thursday;
+                                         cmd2.Parameters["@Friday"].Value = item.Delivery.Friday;
+                                         cmd2.Parameters["@Saturday"].Value = item.Delivery.Saturday;
+                                         cmd2.Parameters["@Sunday"].Value = item.Delivery.Sunday;
+                                         await cmd2.ExecuteNonQueryAsync(_cts.Token);
+
+                                         cmd2.CommandText = "INSERT INTO [Schedule] (Ref, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) " +
+                                                           "VALUES (@Ref, @Monday, @Tuesday, @Wednesday, @Thursday, @Friday, @Saturday, @Sunday)";
+                                         cmd2.Parameters["@Monday"].Value = item.Schedule.Monday;
+                                         cmd2.Parameters["@Tuesday"].Value = item.Schedule.Tuesday;
+                                         cmd2.Parameters["@Wednesday"].Value = item.Schedule.Wednesday;
+                                         cmd2.Parameters["@Thursday"].Value = item.Schedule.Thursday;
+                                         cmd2.Parameters["@Friday"].Value = item.Schedule.Friday;
+                                         cmd2.Parameters["@Saturday"].Value = item.Schedule.Saturday;
+                                         cmd2.Parameters["@Sunday"].Value = item.Schedule.Sunday;
+                                        await cmd2.ExecuteNonQueryAsync(_cts.Token);
+
+                                        
+                                     }
+                                }
+
+                               
+                            }
+                            pb_state.Value += 100.0 / count;
+                        }
+                    }
+                }
+               
+
+            }
+        }
+
+        #endregion
+
         protected async Task<bool> CheckConnectionAsync()
         {
             try
@@ -370,9 +486,21 @@ namespace PostWatcher
 
         private void Btn_cancel_OnClick(object sender, RoutedEventArgs e)
         {
-        
+
 
             _cts.Cancel();
+        }
+
+
+        private static XmlNodeList CreateXmlListPropertiesForGetWarehouses(string cityRef)
+        {
+            var xmlDoc = new XmlDocument();
+            var newItem = xmlDoc.CreateNode(XmlNodeType.Element, "CityRef", null);
+            newItem.InnerText = cityRef;
+
+            xmlDoc.AppendChild(newItem);
+            XmlNodeList xmlList = xmlDoc.ChildNodes;
+            return xmlList;
         }
     }
 
