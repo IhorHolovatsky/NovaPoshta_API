@@ -306,7 +306,7 @@ namespace PostWatcher
                         _documentCost = info.InnerText;
                         break;
                     case "DataReceived":
-                        _dataReceived = DateTime.Parse(info.InnerText);
+                        DateTime.TryParse(info.InnerText, out _dataReceived);
                         break;
                     case "RecipientFullName":
                         _recipientFullName = info.InnerText;
@@ -315,11 +315,11 @@ namespace PostWatcher
                         _recipientPost = info.InnerText;
                         break;
                     case "ReceiptDateTime":
-                        _receiptDateTime = DateTime.Parse(info.InnerText);
+                        DateTime.TryParse(info.InnerText, out _receiptDateTime);
                         break;
 
                     case "OnlinePayment":
-                        _onlinePayment = Boolean.Parse(info.InnerText);
+                        Boolean.TryParse(info.InnerText, out _onlinePayment);
                         break;
                     case "DeliveryFrom":
                         _deliveryFrom = info.InnerText;
@@ -367,19 +367,19 @@ namespace PostWatcher
                         _redeliveryCargoDescriptionMoney = info.InnerText;
                         break;
                     case "Failure":
-                        _failure = Boolean.Parse(info.InnerText);
+                        Boolean.TryParse(info.InnerText, out _failure);
                         break;
                     case "ReasonDescription":
                         _reasonDescription = info.InnerText;
                         break;
                     case "GlobalMoneyExistDelivery":
-                        _globalMoneyExistDelivery = Boolean.Parse(info.InnerText);
+                        Boolean.TryParse(info.InnerText, out _globalMoneyExistDelivery);
                         break;
                     case "GlobalMoneyLastTransactionStatus":
                         _globalMoneyLastTransactionStatus = info.InnerText;
                         break;
                     case "GlobalMoneyLastTransactionDate":
-                        _globalMoneyLastTransactionDate = DateTime.Parse(info.InnerText);
+                        DateTime.TryParse(info.InnerText, out _globalMoneyLastTransactionDate);
                         break;
                     case "Sum":
                         _sum = info.InnerText;
@@ -391,7 +391,7 @@ namespace PostWatcher
                         _sumBeforeCheckWeight = info.InnerText;
                         break;
                     case "IsEwpPaid":
-                        _isEwpPaid = Boolean.Parse(info.InnerText);
+                        Boolean.TryParse(info.InnerText, out _isEwpPaid);
                         break;
                     case "IsEwpPaidCashLess":
                         _isEwpPaidCashLess = info.InnerText;

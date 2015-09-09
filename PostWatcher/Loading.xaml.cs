@@ -224,8 +224,13 @@ namespace PostWatcher
                 }
                 catch (SqlException e)
                 {
-                    return;
-                }
+                    cmd.CommandText =
+                        "UPDATE [TTN] SET DateTime = @DateTime, CityRecipientDescription = @CityRecipientDescription," +
+                        " RecipientDescription = @RecipientDescription, RecipientAddressDescription = @RecipientAddressDescription, " +
+                        "RecipientContactPhone = @RecipientContactPhone, Weight = @Weight, Cost = @Cost, CostOnSite = @CostOnSite, StateName = @StateName," +
+                        " PrintedDescription = @PrintedDescription, APIKey = @APIKey WHERE TTN = @TTN";
+                    cmd.ExecuteNonQuery();
+               }
             }
         }
 

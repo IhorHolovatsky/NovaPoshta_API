@@ -306,21 +306,22 @@ namespace PostWatcher
         private async void MenuItem_OnClick(object sender, RoutedEventArgs e)
         {
             var selectedItems = DG_doc.SelectedItems.Cast<DataItem>().ToList();
-
+           
             var methodPrepetries = CreateXmlListPropertiesForDocumentsTracking(selectedItems);
-
+           
             OpenLoader("InternetDocument", "documentsTracking", methodPrepetries);
 
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
+                int i = 0;
 
-                foreach (XmlNode node in methodPrepetries)
+                foreach (XmlNode item in methodPrepetries[0].ChildNodes) 
                 {
-                    using (SqlCommand cmd = new SqlCommand("SELECT * FROM [TTN] WHERE (TTN = @TTN)", connection))
+            using (SqlCommand cmd = new SqlCommand("SELECT * FROM [TTN] WHERE (TTN = @TTN)", connection))
                     {
-                        cmd.Parameters.AddWithValue("@TTN", node.InnerText);
+                        cmd.Parameters.AddWithValue("@TTN", item.InnerText);
                         using (var reader = await cmd.ExecuteReaderAsync())
                         {
                             if (reader.HasRows)
@@ -338,8 +339,10 @@ namespace PostWatcher
                                     dataItem.CostOnSite = reader.GetDouble(8);
                                     dataItem.StateName = reader.GetString(9).Trim();
                                     dataItem.PrintedDescription = reader.GetString(10).Trim();
-
-                                    AddItemsToDataGrid(dataItem, _filter);
+                                    
+                                    var index = DG_doc.Items.IndexOf(selectedItems[i]);
+                                    DG_doc.Items[index] = dataItem;
+                                    i++;
                                 }
                         }
                     }
