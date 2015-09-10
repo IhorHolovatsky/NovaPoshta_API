@@ -15,7 +15,7 @@ namespace PostWatcher
     public class APImethods
     {
         private static string _apiKey;
-
+      
         public APImethods(string apiKey)
         {
             _apiKey = apiKey;
@@ -31,9 +31,10 @@ namespace PostWatcher
 
             var httpWebRequest = (HttpWebRequest)WebRequest.Create("https://api.novaposhta.ua/v2.0/xml/");
             httpWebRequest.Method = "POST";
+            httpWebRequest.KeepAlive = true;
             httpWebRequest.ContentType = @"application/x-www-form-urlencoded";
             ServicePointManager.DefaultConnectionLimit = 2000;
-
+         
             var streamOut = new StreamWriter(await httpWebRequest.GetRequestStreamAsync());
             await streamOut.WriteAsync(xmlRequest.InnerXml);
 
@@ -219,8 +220,10 @@ namespace PostWatcher
             XmlDocument xmlResponse = null;
             try
             {
-                Thread.Sleep(new Random().Next(50));
-                xmlResponse = await SendRequestXmlDocumentAsync(xmlQuery);
+                Thread.Sleep(new Random().Next(40));
+
+                   xmlResponse = await SendRequestXmlDocumentAsync(xmlQuery);
+             
             }
             catch (WebException e)
             {

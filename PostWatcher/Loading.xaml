@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d" x:Class="PostWatcher.Loading"
         Title="Loading..." Height="169" WindowStartupLocation="CenterScreen" Width="481" WindowStyle="ToolWindow" BorderThickness="0" Loaded="Loading_OnLoaded">
     <Grid>
-        <ProgressBar x:Name="pb_state" HorizontalAlignment="Left" Height="36" Margin="10,41,0,0" VerticalAlignment="Top" Width="448"/>
+        <ProgressBar x:Name="pb_state" ValueChanged="Pb_state_OnValueChanged" HorizontalAlignment="Left" Height="36" Margin="10,41,0,0" VerticalAlignment="Top" Width="448"/>
         <Label x:Name="l_state" Content="" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" RenderTransformOrigin="-0.237,0.231"/>
         <Button x:Name="btn_cancel" Content="Cancel" HorizontalAlignment="Left" Margin="363,94,0,0" Click="Btn_cancel_OnClick" VerticalAlignment="Top" Width="95" Height="26"/>
 

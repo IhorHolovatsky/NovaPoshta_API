@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO;
 using System.IO.IsolatedStorage;
 using System.Linq;
@@ -22,7 +23,6 @@ namespace PostWatcher
     public partial class Loading
     {
         private CancellationTokenSource _cts = new CancellationTokenSource();
-
         private APImethods _apiMethods;
         private Task _runnedTask;
         private readonly string _apiKey;
@@ -60,6 +60,7 @@ namespace PostWatcher
             else
             {
 
+                await GetWarehouses();
 
                 l_state.Content = "Запит обробляється...";
 
@@ -78,7 +79,6 @@ namespace PostWatcher
                         break;
                     case "RefreshLibraries":
                         await GetCities();
-                        await GetWarehouses();
                         break;
 
                 }
@@ -224,7 +224,7 @@ namespace PostWatcher
                 {
                     cmd.ExecuteNonQuery();
                 }
-                catch (SqlException e)
+                catch (SqlException)
                 {
                     cmd.CommandText =
                         "UPDATE [TTN] SET DateTime = @DateTime, CityRecipientDescription = @CityRecipientDescription," +
@@ -282,7 +282,7 @@ namespace PostWatcher
                         {
                             await cmd.ExecuteNonQueryAsync();
                         }
-                        catch (SqlException e)
+                        catch (SqlException)
                         {
                             return;
                         }
@@ -342,7 +342,7 @@ namespace PostWatcher
                     {
                         await cmd.ExecuteNonQueryAsync();
                     }
-                    catch (SqlException e)
+                    catch (SqlException)
                     {
                         return;
                     }
@@ -361,7 +361,11 @@ namespace PostWatcher
         {
             try
             {
+                var stw = new Stopwatch();
+                stw.Start();
                 await _GetWarehouses();
+                stw.Stop();
+                MessageBox.Show(stw.Elapsed.ToString());
             }
             catch (OperationCanceledException)
             {
@@ -377,98 +381,161 @@ namespace PostWatcher
 
         public async Task _GetWarehouses()
         {
+            List<City> cities;
+            int count;
             using (SqlConnection connectionCity = new SqlConnection(_connectionString))
             {
                 await connectionCity.OpenAsync(_cts.Token);
 
-                int count;
                 using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM [Cities]", connectionCity))
                 {
-                   count = (int) cmd.ExecuteScalar();
+                    count = (int) cmd.ExecuteScalar();
                 }
-                
+
                 using (SqlCommand cmd = new SqlCommand("SELECT Ref FROM [Cities]", connectionCity))
                 {
-                    using (var reader = await cmd.ExecuteReaderAsync(_cts.Token))
+                    using (var readerCity = await cmd.ExecuteReaderAsync(_cts.Token))
                     {
-                        while (await reader.ReadAsync(_cts.Token))
-                        {
-                            var cityRef = reader.GetString(0);
-                            var methodProperties = CreateXmlListPropertiesForGetWarehouses(cityRef);
-                            var document = await _apiMethods.GetWarehousesAsync(methodProperties);
-                            using (SqlConnection connectionWarehouses = new SqlConnection(_connectionString))
+                         cities = await Task.Factory.StartNew(
+                            () =>
                             {
-                                await connectionWarehouses.OpenAsync(_cts.Token);
-
-                                if (!document.HasData) continue;
-
-                                foreach (var item in document.Items)
+                                var list = new List<City>(1000);
+                                while (readerCity.Read())
                                 {
-                                     using (SqlCommand cmd2 = new SqlCommand("INSERT INTO [Warehouses] (Description, DescriptionRu, Phone, TypeOfWarehouse," +
-                                                                        " Ref, Number, CityRef, Longitude, Latitude) VALUES (@Description, @DescriptionRu, @Phone, @TypeOfWarehouse," +
-                                                                        " @Ref, @Number, @CityRef, @Longitude, @Latitude)", connectionWarehouses))
-                                     {
-                                         cmd2.Parameters.AddWithValue("@Description", item.Description);
-                                         cmd2.Parameters.AddWithValue("@DescriptionRu", item.DescriptionRu);
-                                         cmd2.Parameters.AddWithValue("@Phone", item.Phone);
-                                         cmd2.Parameters.AddWithValue("@TypeOfWarehouse", item.TypeOfWarehouse);
-                                         cmd2.Parameters.AddWithValue("@Ref", item.Ref);
-                                         cmd2.Parameters.AddWithValue("@Number", item.Number);
-                                         cmd2.Parameters.AddWithValue("@CityRef", item.CityRef);
-                                 cmd2.Parameters.AddWithValue("@Longitude", item.Longitude);
-                                         cmd2.Parameters.AddWithValue("@Latitude", item.Latitude);
-                                         await cmd2.ExecuteNonQueryAsync(_cts.Token);
-
-                                         cmd2.CommandText = "INSERT INTO [Reception] (Ref, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) " +
-                                                            "VALUES (@Ref, @Monday, @Tuesday, @Wednesday, @Thursday, @Friday, @Saturday, @Sunday)";
-                                         cmd2.Parameters.AddWithValue("@Monday", item.Reception.Monday);
-                                         cmd2.Parameters.AddWithValue("@Tuesday", item.Reception.Tuesday);
-                                         cmd2.Parameters.AddWithValue("@Wednesday", item.Reception.Wednesday);
-                                         cmd2.Parameters.AddWithValue("@Thursday", item.Reception.Thursday);
-                                         cmd2.Parameters.AddWithValue("@Friday", item.Reception.Friday);
-                                         cmd2.Parameters.AddWithValue("@Saturday", item.Reception.Saturday);
-                                         cmd2.Parameters.AddWithValue("@Sunday", item.Reception.Sunday);
-                                         await cmd2.ExecuteNonQueryAsync(_cts.Token);
-
-                                         cmd2.CommandText = "INSERT INTO [Delivery] (Ref, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) " +
-                                                           "VALUES (@Ref, @Monday, @Tuesday, @Wednesday, @Thursday, @Friday, @Saturday, @Sunday)";
-                                         cmd2.Parameters["@Monday"].Value = item.Delivery.Monday;
-                                         cmd2.Parameters["@Tuesday"].Value = item.Delivery.Tuesday;
-                                         cmd2.Parameters["@Wednesday"].Value = item.Delivery.Wednesday;
-                                         cmd2.Parameters["@Thursday"].Value = item.Delivery.Thursday;
-                                         cmd2.Parameters["@Friday"].Value = item.Delivery.Friday;
-                                         cmd2.Parameters["@Saturday"].Value = item.Delivery.Saturday;
-                                         cmd2.Parameters["@Sunday"].Value = item.Delivery.Sunday;
-                                         await cmd2.ExecuteNonQueryAsync(_cts.Token);
-
-                                         cmd2.CommandText = "INSERT INTO [Schedule] (Ref, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) " +
-                                                           "VALUES (@Ref, @Monday, @Tuesday, @Wednesday, @Thursday, @Friday, @Saturday, @Sunday)";
-                                         cmd2.Parameters["@Monday"].Value = item.Schedule.Monday;
-                                         cmd2.Parameters["@Tuesday"].Value = item.Schedule.Tuesday;
-                                         cmd2.Parameters["@Wednesday"].Value = item.Schedule.Wednesday;
-                                         cmd2.Parameters["@Thursday"].Value = item.Schedule.Thursday;
-                                         cmd2.Parameters["@Friday"].Value = item.Schedule.Friday;
-                                         cmd2.Parameters["@Saturday"].Value = item.Schedule.Saturday;
-                                         cmd2.Parameters["@Sunday"].Value = item.Schedule.Sunday;
-                                        await cmd2.ExecuteNonQueryAsync(_cts.Token);
-
-                                        
-                                     }
+                                    var item = new City
+                                    {
+                                        Ref = readerCity.GetString(0).Trim()
+                                    };
+                                    list.Add(item);
                                 }
-
-                               
-                            }
-                            pb_state.Value += 100.0 / count;
-                        }
-                    }
+                                return list;
+                            });
+  }
                 }
-               
+            }
 
+            using (SqlConnection connectionWarehouses = new SqlConnection(_connectionString))
+            {
+                await connectionWarehouses.OpenAsync();
+
+                var makeTasks = await Task<IEnumerable<Task<Document<Warehouse>>>>.Factory.StartNew(
+                    () =>
+                    {
+                        var xmlQueryProperties = from x in cities
+                            select CreateXmlListPropertiesForGetWarehouses(x.Ref);
+                        var prop = xmlQueryProperties.ToList();
+
+                        List<Task<Document<Warehouse>>> tasks = new List<Task<Document<Warehouse>>>();
+
+                        Parallel.ForEach(prop,new ParallelOptions{MaxDegreeOfParallelism = 2}, x =>
+                        {
+                            var task = _apiMethods.GetWarehousesAsync(x);
+                            tasks.Add(task);
+                        });
+                      
+                      
+
+                        return tasks;
+                    }
+                    );
+
+                var  b = makeTasks.ToList();
+                int a = 0;
+                while (b.Count > 0)
+                {
+                    var task = await Task.WhenAny(b);
+                   _cts.Token.ThrowIfCancellationRequested();
+
+                    b.Remove(task);
+
+                 
+                    var doc = task.Result;
+
+                    if (!doc.HasData) continue;
+                    a += task.Result.Items.Count;
+                
+                    if (!doc.Success)
+                    {
+                        MessageBox.Show("Invalid API key");
+                        Close();
+                    }
+                    
+                 //await DoWorkAsync(doc, connectionWarehouses);
+                   pb_state.Value += 100.0 / count;
+                }
+             
             }
         }
 
         #endregion
 
+        private async Task DoWorkAsync(Document<Warehouse> document, SqlConnection connectionWarehouses)
+        {
+           foreach (var item in document.Items)
+            {
+                using (
+                    SqlCommand cmd2 =
+                        new SqlCommand(
+                            "INSERT INTO [Warehouses] (Description, DescriptionRu, Phone, TypeOfWarehouse," +
+                            " Ref, Number, CityRef, Longitude, Latitude) VALUES (@Description, @DescriptionRu, @Phone, @TypeOfWarehouse," +
+                            " @Ref, @Number, @CityRef, @Longitude, @Latitude)", connectionWarehouses)
+                    )
+                {
+                    cmd2.Parameters.AddWithValue("@Description", item.Description);
+                    cmd2.Parameters.AddWithValue("@DescriptionRu", item.DescriptionRu);
+                    cmd2.Parameters.AddWithValue("@Phone", item.Phone);
+                    cmd2.Parameters.AddWithValue("@TypeOfWarehouse", item.TypeOfWarehouse);
+                    cmd2.Parameters.AddWithValue("@Ref", item.Ref);
+                    cmd2.Parameters.AddWithValue("@Number", item.Number);
+                    cmd2.Parameters.AddWithValue("@CityRef", item.CityRef);
+                    cmd2.Parameters.AddWithValue("@Longitude", item.Longitude);
+                    cmd2.Parameters.AddWithValue("@Latitude", item.Latitude);
+                    await cmd2.ExecuteNonQueryAsync();
+
+
+                    cmd2.CommandText =
+                        "INSERT INTO [Reception] (Ref, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) " +
+                        "VALUES (@Ref, @Monday, @Tuesday, @Wednesday, @Thursday, @Friday, @Saturday, @Sunday)";
+                    cmd2.Parameters.AddWithValue("@Monday", item.Reception.Monday);
+                    cmd2.Parameters.AddWithValue("@Tuesday", item.Reception.Tuesday);
+                    cmd2.Parameters.AddWithValue("@Wednesday", item.Reception.Wednesday);
+                    cmd2.Parameters.AddWithValue("@Thursday", item.Reception.Thursday);
+                    cmd2.Parameters.AddWithValue("@Friday", item.Reception.Friday);
+                    cmd2.Parameters.AddWithValue("@Saturday", item.Reception.Saturday);
+                    cmd2.Parameters.AddWithValue("@Sunday", item.Reception.Sunday);
+
+                    await cmd2.ExecuteNonQueryAsync();
+
+                    cmd2.CommandText =
+                        "INSERT INTO [Delivery] (Ref, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) " +
+                        "VALUES (@Ref, @Monday, @Tuesday, @Wednesday, @Thursday, @Friday, @Saturday, @Sunday)";
+                    cmd2.Parameters["@Monday"].Value = item.Delivery.Monday;
+                    cmd2.Parameters["@Tuesday"].Value = item.Delivery.Tuesday;
+                    cmd2.Parameters["@Wednesday"].Value = item.Delivery.Wednesday;
+                    cmd2.Parameters["@Thursday"].Value = item.Delivery.Thursday;
+                    cmd2.Parameters["@Friday"].Value = item.Delivery.Friday;
+                    cmd2.Parameters["@Saturday"].Value = item.Delivery.Saturday;
+                    cmd2.Parameters["@Sunday"].Value = item.Delivery.Sunday;
+
+                    await cmd2.ExecuteNonQueryAsync();
+
+                    cmd2.CommandText =
+                        "INSERT INTO [Schedule] (Ref, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) " +
+                        "VALUES (@Ref, @Monday, @Tuesday, @Wednesday, @Thursday, @Friday, @Saturday, @Sunday)";
+                    cmd2.Parameters["@Monday"].Value = item.Schedule.Monday;
+                    cmd2.Parameters["@Tuesday"].Value = item.Schedule.Tuesday;
+                    cmd2.Parameters["@Wednesday"].Value = item.Schedule.Wednesday;
+                    cmd2.Parameters["@Thursday"].Value = item.Schedule.Thursday;
+                    cmd2.Parameters["@Friday"].Value = item.Schedule.Friday;
+                    cmd2.Parameters["@Saturday"].Value = item.Schedule.Saturday;
+                    cmd2.Parameters["@Sunday"].Value = item.Schedule.Sunday;
+
+                    await cmd2.ExecuteNonQueryAsync();
+
+
+                }
+            }
+        }
         protected async Task<bool> CheckConnectionAsync()
         {
             try
@@ -501,6 +568,11 @@ namespace PostWatcher
             xmlDoc.AppendChild(newItem);
             XmlNodeList xmlList = xmlDoc.ChildNodes;
             return xmlList;
+        }
+
+        private void Pb_state_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            pb_state.Value = e.NewValue;
         }
     }
 

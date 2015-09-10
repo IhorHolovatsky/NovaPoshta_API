@@ -18,53 +18,99 @@ namespace API_NovaPoshta
 {
     class Program
     {
+        public static object _locker = new object();
+
         public static string _APIKey = "fsdfsfs";
         static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.GetEncoding("Cyrillic");
             var stw = new Stopwatch();
             stw.Start();
-          var  _connectionString = ConfigurationManager.ConnectionStrings["connectToTTN"].ConnectionString;
+            var _connectionString = ConfigurationManager.ConnectionStrings["connectToTTN"].ConnectionString;
             stw.Stop();
+            SqlConnection connectionWarehouses = new SqlConnection(_connectionString);
+            
+                connectionWarehouses.Open();
 
+                Parallel.For(0, 20, (i) =>
+                {
+
+
+
+                    using (
+                        SqlCommand cmd2 =
+                            new SqlCommand(
+                                "INSERT INTO [Warehouses] (Description, DescriptionRu, Phone, TypeOfWarehouse," +
+                                " Ref, Number, CityRef, Longitude, Latitude) VALUES (@Description, @DescriptionRu, @Phone, @TypeOfWarehouse," +
+                                " @Ref, @Number, @CityRef, @Longitude, @Latitude)", connectionWarehouses))
+                    {
+
+                        int x;
+                        lock (_locker)
+                        {
+                            Thread.Sleep(100);
+                            x = new Random().Next(1000000000);
+                        }
+                        Console.WriteLine(x + " Thread:" + Thread.CurrentThread.ManagedThreadId);
+
+                        cmd2.Parameters.AddWithValue("@Description", 1);
+                        cmd2.Parameters.AddWithValue("@DescriptionRu", 2);
+                        cmd2.Parameters.AddWithValue("@Phone", 3);
+                        cmd2.Parameters.AddWithValue("@TypeOfWarehouse", 4);
+                        cmd2.Parameters.AddWithValue("@Ref", x);
+                        cmd2.Parameters.AddWithValue("@Number", 6);
+                        cmd2.Parameters.AddWithValue("@CityRef", 7);
+                        cmd2.Parameters.AddWithValue("@Longitude", 8);
+                        cmd2.Parameters.AddWithValue("@Latitude", 9);
+                            cmd2.ExecuteNonQuery();
+
+                        cmd2.CommandText =
+                            "INSERT INTO [Reception] (Ref, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) " +
+                            "VALUES (@Ref, @Monday, @Tuesday, @Wednesday, @Thursday, @Friday, @Saturday, @Sunday)";
+                        cmd2.Parameters.AddWithValue("@Monday", 1);
+                        cmd2.Parameters.AddWithValue("@Tuesday", 2);
+                        cmd2.Parameters.AddWithValue("@Wednesday", 3);
+                        cmd2.Parameters.AddWithValue("@Thursday", 4);
+                        cmd2.Parameters.AddWithValue("@Friday", 5);
+                        cmd2.Parameters.AddWithValue("@Saturday", 6);
+                        cmd2.Parameters.AddWithValue("@Sunday", 7);
+                            cmd2.ExecuteNonQuery();
+                        cmd2.CommandText =
+                            "INSERT INTO [Delivery] (Ref, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) " +
+                            "VALUES (@Ref, @Monday, @Tuesday, @Wednesday, @Thursday, @Friday, @Saturday, @Sunday)";
+                        cmd2.Parameters["@Monday"].Value = 1;
+                        cmd2.Parameters["@Tuesday"].Value = 2;
+                        cmd2.Parameters["@Wednesday"].Value = 3;
+                        cmd2.Parameters["@Thursday"].Value = 4;
+                        cmd2.Parameters["@Friday"].Value = 5;
+                        cmd2.Parameters["@Saturday"].Value = 6;
+                        cmd2.Parameters["@Sunday"].Value = 7;
+                            cmd2.ExecuteNonQuery();
+                            
+                        cmd2.CommandText =
+                            "INSERT INTO [Schedule] (Ref, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) " +
+                            "VALUES (@Ref, @Monday, @Tuesday, @Wednesday, @Thursday, @Friday, @Saturday, @Sunday)";
+                        cmd2.Parameters["@Monday"].Value = 1;
+                        cmd2.Parameters["@Tuesday"].Value = 1;
+                        cmd2.Parameters["@Wednesday"].Value = 1;
+                        cmd2.Parameters["@Thursday"].Value = 1;
+                        cmd2.Parameters["@Friday"].Value = 1;
+                        cmd2.Parameters["@Saturday"].Value = 1;
+                        cmd2.Parameters["@Sunday"].Value = 1;
+                            cmd2.ExecuteNonQuery();
+                        Console.WriteLine(x + "writed!");
+
+                    }
+
+
+
+                }
+                    );
+                Console.WriteLine("SOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOQQQQAAAAAAAAAAAAAAAAAa");
+               
+            
             
 
-            //DateTime left = DateTime.Parse("01.01.2015");
-            //DateTime right = DateTime.Today;
-
-            //string connectionString = ConfigurationManager.ConnectionStrings["connectToTTN"].ConnectionString;
-
-      
-            //using (SqlConnection connection = new SqlConnection(connectionString))
-            //using (
-            //    SqlCommand cmd = new SqlCommand("SELECT * FROM [TTN] WHERE DateTime BETWEEN @left AND @right ",connection))
-            //{
-            //    connection.Open();
-            //    cmd.Parameters.AddWithValue("@left", left);
-            //    cmd.Parameters.AddWithValue("@right", right);
-                
-            //    using (var reader =  cmd.ExecuteReader())
-            //    {
-            //        if (reader.HasRows)
-            //            while (reader.Read())
-            //            {
-            //                var DataItem = new DataItem();
-            //                DataItem.IntDocNumber = reader.GetString(0);
-            //                DataItem.DateTime = reader.GetDateTime(1);
-            //                DataItem.CityRecipientDescription = reader.GetString(2);
-            //                DataItem.RecipientDescription = reader.GetString(3);
-            //                DataItem.RecipientAddress = reader.GetString(4);
-            //                DataItem.RecipientContactPhone = reader.GetString(5);
-            //                Console.WriteLine(reader.GetDouble(6));
-            //                DataItem.Weight = reader.GetDouble(6);
-            //                DataItem.Cost = reader.GetDouble(7);
-            //                DataItem.CostOnSite = reader.GetDouble(8);
-            //                DataItem.StateName = reader.GetString(9);
-            //                DataItem.PrintedDescription = reader.GetString(10);
-            //            }
-            //    }
-            //}
-       
             Console.ReadLine();
         }
 
@@ -95,9 +141,9 @@ namespace API_NovaPoshta
                 cmd.ExecuteNonQuery();
             }
         }
-        
+
 
     }
 
-   
+
 }
